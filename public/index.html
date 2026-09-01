@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offer Pilot · 秋招 AI 产品岗个人助手</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">✈️</span>
+      <div>
+        <div class="title">Offer Pilot</div>
+        <div class="sub">秋招 AI 产品岗 · 个人投递助手</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="profile">个人档案</button>
+      <button class="tab" data-tab="apps">投递进度</button>
+      <button class="tab" data-tab="interview">面邀备战</button>
+      <button class="tab" data-tab="works">我的作品</button>
+      <button class="tab" data-tab="settings">设置</button>
+    </nav>
+    <div id="keyBadge" class="key-badge">API Key：未设置</div>
+  </header>
+
+  <main>
+    <div id="aiNotice" class="ai-notice" style="display:none"></div>
+    <!-- 个人档案 -->
+    <section class="panel active" id="profile">
+      <div class="grid-2">
+        <div class="card">
+          <h3>基本信息（来自简历）</h3>
+          <div id="basics" class="kv"></div>
+          <h3 style="margin-top:18px">沉淀中的个人偏好</h3>
+          <p class="hint">在右侧聊天里随便聊你的想法（想去的城市、偏好的业务、顾虑…），系统会自动总结沉淀到这里；也可直接手动添加一条。</p>
+          <div id="facts" class="facts"></div>
+          <div class="fact-add">
+            <input id="factKey" placeholder="维度，如：期望 base" />
+            <input id="factValue" placeholder="内容，如：北京/上海" />
+            <button class="btn" id="factAddBtn">手动添加</button>
+          </div>
+        </div>
+        <div class="card chat-card">
+          <h3>和我聊聊（对话即沉淀档案）</h3>
+          <div id="chatLog" class="chat-log"></div>
+          <div class="chat-input">
+            <textarea id="chatInput" placeholder="例如：我其实更想去北京或上海，不太想离老家太远；我比较想做 toC 的 AI 产品…"></textarea>
+            <button id="chatSend">发送</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 投递进度 -->
+    <section class="panel" id="apps">
+      <div class="card">
+        <div class="row-between">
+          <h3>投递漏斗</h3>
+          <button class="btn" id="addAppBtn">+ 新增投递</button>
+        </div>
+        <div id="funnel" class="funnel"></div>
+      </div>
+      <div class="card">
+        <h3>投递清单（<span id="appCount">0</span> 个）</h3>
+        <div id="appTable" class="table"></div>
+      </div>
+    </section>
+
+    <!-- 面邀备战 -->
+    <section class="panel" id="interview">
+      <div class="grid-2">
+        <div class="card">
+          <h3>新建面试备战</h3>
+          <p class="hint">收到面邀后，在这里上传 JD（文字或截图），自动生成自我介绍、可能问的问题与建议回答、知识储备清单。</p>
+          <div class="form">
+            <input id="ivCompany" placeholder="公司" />
+            <input id="ivRole" placeholder="岗位" />
+            <div class="form-row">
+              <select id="ivType">
+                <option value="upcoming">即将面试</option>
+                <option value="historical">历史记录（已结束）</option>
+              </select>
+              <input id="ivDdl" type="datetime-local" placeholder="截止时间（DDL）" />
+            </div>
+            <textarea id="ivText" placeholder="粘贴 JD 文字（可留空，仅传图）"></textarea>
+            <label class="filelabel">上传 JD 截图
+              <input id="ivImage" type="file" accept="image/*" />
+            </label>
+            <div id="ivPreview" class="img-preview"></div>
+            <button class="btn primary" id="ivCreate">生成备战建议</button>
+          </div>
+
+          <!-- 即将面试 -->
+          <h3 style="margin-top:18px">📋 即将面试 <span id="upcomingCount" class="count-badge">0</span></h3>
+          <div id="ivUpcoming" class="iv-list"></div>
+
+          <!-- 历史面试 -->
+          <h3 style="margin-top:18px">📂 历史面试 <span id="histCount" class="count-badge">0</span></h3>
+          <div id="ivHistorical" class="iv-list iv-list-hist"></div>
+        </div>
+        <div class="card" id="ivDetail">
+          <p class="hint">选择左侧一次面试查看建议，并在下方问答窗口继续追问。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 我的作品 -->
+    <section class="panel" id="works">
+      <div class="card">
+        <h3>我的 vibecoding AI 作品集</h3>
+        <p class="hint">这里汇总你用 vibe coding 做出的所有 AI 作品，可直接写进简历 / 面试展示。</p>
+        <div id="worksGrid" class="works-grid"></div>
+      </div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="panel" id="settings">
+      <div class="card" style="max-width:560px">
+        <h3>DeepSeek API Key</h3>
+        <p class="hint">本产品调用 DeepSeek 大模型。Key 仅保存在你本地 <code>data/store.json</code>，不会上传。获取：platform.deepseek.com → API Keys。</p>
+        <div class="form">
+          <input id="setKey" type="password" placeholder="sk-..." />
+          <input id="setModel" placeholder="模型（默认 deepseek-chat）" list="modelList" />
+          <datalist id="modelList">
+            <option value="deepseek-chat">
+            <option value="deepseek-reasoner">
+            <option value="deepseek-v3">
+          </datalist>
+          <button class="btn primary" id="setSave">保存</button>
+        </div>
+        <p id="setMsg" class="msg"></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

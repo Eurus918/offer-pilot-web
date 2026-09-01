@@ -1,0 +1,23 @@
+{
+  "name": "offer-pilot-web",
+  "version": "1.0.0",
+  "description": "秋招 AI 产品岗个人投递助手 —— 独立可运行的 AI 产品（vibecoding），沉淀求职画像、管理投递进度、基于 JD 备战面试、汇总作品集",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "秋招",
+    "求职助手",
+    "ai-product-manager",
+    "deepseek",
+    "vibecoding",
+    "job-tracker"
+  ],
+  "author": "王辰宇 (Wang Chenyu)",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

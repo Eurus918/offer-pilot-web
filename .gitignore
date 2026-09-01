@@ -1,0 +1,17 @@
+# 依赖
+node_modules/
+
+# 环境变量（含 API Key，绝不提交）
+.env
+.env.local
+
+# 真实数据（含个人投递记录、简历信息，绝不提交）
+data/store.json
+
+# 日志
+*.log
+server.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
