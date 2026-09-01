@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>王辰宇 · AI 产品岗作品集</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #1f2430; font-size: 9.5pt; line-height: 1.5;
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px; border-bottom: 2px solid #4f46e5; margin-bottom: 12px;
+  }
+  .header h1 { font-size: 18pt; color: #4f46e5; }
+  .header .meta { text-align: right; font-size: 8.5pt; color: #6b7280; }
+  .header .meta b { color: #1f2430; }
+  .summary {
+    background: linear-gradient(135deg, #eef0ff, #f3e8ff);
+    padding: 10px 12px; border-radius: 6px; margin-bottom: 14px;
+    font-size: 9pt; line-height: 1.55;
+  }
+  .summary b { color: #4f46e5; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .work {
+    border: 1px solid #e6e8ef; border-radius: 8px; padding: 10px 12px;
+    page-break-inside: avoid;
+  }
+  .work.full { grid-column: span 2; }
+  .work .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .work h3 { font-size: 11pt; color: #4f46e5; margin-bottom: 2px; }
+  .work .tag {
+    font-size: 7.5pt; padding: 2px 7px; border-radius: 12px;
+    background: #eef0ff; color: #4f46e5; font-weight: 600;
+  }
+  .work .tag.green { background: #dcfce7; color: #15803d; }
+  .work .tag.orange { background: #ffedd5; color: #c2410c; }
+  .work .desc { font-size: 8.5pt; color: #4b5563; margin: 4px 0; }
+  .work .metrics { font-size: 8.5pt; color: #1f2430; margin: 4px 0; }
+  .work .metrics b { color: #4f46e5; }
+  .work .link { font-size: 8pt; color: #6b7280; word-break: break-all; }
+  .work .link a { color: #4f46e5; text-decoration: none; }
+  .work .screenshot {
+    width: 100%; height: auto; max-height: 130px; object-fit: contain;
+    border-radius: 4px; border: 1px solid #e6e8ef; margin-top: 6px;
+  }
+  .footer {
+    margin-top: 14px; padding-top: 10px; border-top: 1px solid #e6e8ef;
+    display: flex; justify-content: space-between; font-size: 8pt; color: #6b7280;
+  }
+  .footer .links a { color: #4f46e5; text-decoration: none; margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>王辰宇 · AI 产品岗作品集</h1>
+  <div class="meta">
+    <div><b>中国人民大学</b> · 国际商务硕士（商学院）</div>
+    <div>2027 届 · 目标 AI 产品经理 / 大模型产品经理</div>
+    <div>📧 wangchenyuwangyi@163.com</div>
+  </div>
+</div>
+
+<div class="summary">
+  <b>核心定位：</b>vibecoding 实践者 + B 端 AI 产品落地经验。熟悉 Agent 设计边界、数据驱动迭代、跨团队推动。
+  <b>简历亮点：</b>结算 Agent 90%+ 非标验收自动化 · 省 80% 人力 · 14,696 笔实操数据。
+  <b>这套作品：</b>从代码仓库到产品截图到方法论文档，体现"端到端交付能力"。
+</div>
+
+<div class="grid">
+
+  <div class="work full">
+    <div class="head"><h3>① Offer Pilot Web · 秋招 AI 产品岗个人助手</h3><span class="tag">首推 · 唯一可外链</span></div>
+    <div class="desc">独立开发的全栈 Web 应用——沉淀个人画像、管理 18 家公司的投递进度、上传 JD 图文自动备战面试，嵌入 dsh 的 4 大 Agent 插件。</div>
+    <div class="metrics">
+      <b>技术：</b>Node + Express + DeepSeek API + 原生前端（零构建）<br>
+      <b>模块：</b>个人档案 / 投递进度 / 面邀备战 / 作品集 / <b>Agent 工作台</b><br>
+      <b>差异化：</b>知识库驱动的 4 大 Agent 插件 · 多模态 JD 分析 · 数据完全本地化
+    </div>
+    <div class="link">📦 GitHub: <a href="https://github.com/Eurus918/offer-pilot-web">github.com/Eurus918/offer-pilot-web</a> · MIT 开源 · 5 分钟跑起来</div>
+    <img class="screenshot" src="file:///Users/wangchenyu/WorkBuddy/2026-08-28-11-36-07/offer-pilot-web/docs/screenshots/02-apps.png" alt="投递进度">
+  </div>
+
+  <div class="work">
+    <div class="head"><h3>② dsh · Offer Pilot 技能</h3><span class="tag green">Agent 设计</span></div>
+    <div class="desc">DeepSeek Harness 上的秋招投递技能包。4 大插件：投前（JD 解析/简历定制/求职信）→ 笔面备战 → 公司研究 → 进度管理。</div>
+    <div class="metrics">
+      <b>设计：</b>插件化架构 + 知识库驱动<br>
+      <b>实战：</b>已服务于本人 17 家公司的真实投递流程
+    </div>
+    <div class="link">📦 <a href="https://github.com/Eurus918/offer-pilot-skill">github.com/Eurus918/offer-pilot-skill</a></div>
+    <img class="screenshot" src="file:///Users/wangchenyu/WorkBuddy/2026-08-28-11-36-07/offer-pilot-web/docs/screenshots/05-agent.png" alt="Agent 工作台">
+  </div>
+
+  <div class="work">
+    <div class="head"><h3>③ 某头部互联网公司 · 内部社交小程序</h3><span class="tag orange">脱敏版本</span></div>
+    <div class="desc"><b>背景：</b>内部员工跨团队找搭子难。承接产品双目标（DAU/次留），主导「同频圈」兴趣社群体系规划与日常运营。</div>
+    <div class="metrics">
+      <b>核心设计：</b>以「活动帖+瞬间时刻+圈内匿名群聊」承载内容与关系<br>
+      <b>数据：</b>DAU 906（达成 302%） · 次留 38.46%（超目标 8.46pp）<br>
+      <b>方法：</b>埋点+热力图挖掘 18 项优化点 → 形成"数据验证→反向修正假设"复盘闭环
+    </div>
+    <div class="link">⚠️ 内部项目 · 无外链/截图 · 详情面试展开</div>
+  </div>
+
+  <div class="work">
+    <div class="head"><h3>④ 某头部互联网公司 · B 端结算平台 Agent</h3><span class="tag orange">脱敏版本 · 作品核心</span></div>
+    <div class="desc"><b>背景：</b>非标验收人工成本高。原始需求仅为「窄表自动化生成宽表」，我主动向上追溯到真痛点：<b>数据源生成</b>。</div>
+    <div class="metrics">
+      <b>设计：</b>双入口架构（平台侧+AI 助手侧）+ 4 个核心设计 + 数据一致性三条防线<br>
+      <b>数据：</b>90%+ 自动化 · 14,696 笔 · 省 80% 人力 · 已评审代排期<br>
+      <b>前瞻：</b>为「自然语言生成策略」画全流程图并预留接口
+    </div>
+    <div class="link">📄 配套方法论文档：<i>docs/methodology.md</i></div>
+  </div>
+
+  <div class="work">
+    <div class="head"><h3>⑤ 某出行平台 · 补贴策略优化</h3><span class="tag">数据驱动决策</span></div>
+    <div class="desc"><b>动作：</b>重构补贴发放策略，通过数据归因定位效率瓶颈。</div>
+    <div class="metrics">
+      <b>数据：</b>补贴率 20%→5% · 日均单 200→1000+ · ROI -8% 转正 · 核销率 20%→35%
+    </div>
+    <div class="link">⚠️ 内部项目 · 详情面试展开</div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div>📅 2026-09 整理 · v1.0</div>
+  <div class="links">
+    <a href="https://github.com/Eurus918">GitHub</a>
+    <a href="https://github.com/Eurus918/offer-pilot-web">主仓库</a>
+    <a href="https://github.com/Eurus918/offer-pilot-skill">dsh 技能</a>
+  </div>
+</div>
+
+</body>
+</html>
