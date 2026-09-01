@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: offer-pilot-web
+    runtime: node
+    plan: free
+    # 新加坡节点，国内访问延迟最低
+    region: singapore
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    # 健康检查走一个无副作用的 GET 接口
+    healthCheckPath: /api/state
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # API Key 不写在这里，需在 Render 控制台手动填（sync: false 表示不自动同步）
+      - key: DEEPSEEK_API_KEY
+        sync: false
