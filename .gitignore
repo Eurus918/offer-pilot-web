@@ -15,3 +15,6 @@ server.log
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# Agent 知识库软链（指向本机 offer-pilot-agent/知识库，路径不可移植，不提交）
+agent-kb

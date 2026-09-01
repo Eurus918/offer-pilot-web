@@ -2,6 +2,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 let STATE = null;
 let ivImageData = "";
+let chatFileData = null;  // 当前选中的上传文件 { name, type, base64 }
 
 function toast(msg) {
   const t = $("#toast");
@@ -69,34 +70,151 @@ function renderFacts() {
 function renderChat() {
   const log = $("#chatLog");
   const h = STATE.profile.chatHistory || [];
-  log.innerHTML = h.map((m) => `<div class="msg ${m.role === "user" ? "user" : "ai"}">${esc(m.text)}</div>`).join("");
+  if (h.length === 0) {
+    log.innerHTML = `<div style="text-align:center;color:var(--gray);padding:40px 0;font-size:13.5px">
+      <div style="font-size:32px;margin-bottom:8px">💬</div>
+      开始和 AI 聊聊吧<br><span style="font-size:12px">聊聊你的想法、偏好，或上传资料让 AI 分析</span>
+    </div>`;
+    return;
+  }
+  log.innerHTML = h.map((m) => {
+    const isUser = m.role === "user";
+    const avatar = isUser
+      ? `<div class="chat-avatar user-avatar">👤</div>`
+      : `<div class="chat-avatar ai-avatar">✈️</div>`;
+    const time = m.time ? fmtTime(m.time) : "";
+    // 如果消息附带图片
+    let content = esc(m.text);
+    if (m.image) {
+      content += `<br><img src="${m.image}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;border:1px solid var(--line)" />`;
+    }
+    if (m.fileName && !m.image) {
+      content += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">📎 ${esc(m.fileName)}</span>`;
+    }
+    return `<div class="chat-row ${isUser ? "user" : "ai"}">
+      ${avatar}
+      <div>
+        <div class="chat-bubble">${content}</div>
+        ${time ? `<div class="chat-time">${time}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
   log.scrollTop = log.scrollHeight;
+}
+function fmtTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function esc(s) { return (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 
 $("#chatSend").addEventListener("click", async () => {
   const v = $("#chatInput").value.trim();
-  if (!v) return;
+  if (!v && !chatFileData) return;
   $("#chatInput").value = "";
   const log = $("#chatLog");
-  log.innerHTML += `<div class="msg user">${esc(v)}</div>`;
+  // 清空欢迎语
+  if (log.querySelector("div[style*='text-align:center']")) log.innerHTML = "";
+  const now = new Date().toISOString();
+  // 用户消息气泡
+  let userContent = esc(v);
+  if (chatFileData) {
+    if (chatFileData.type.startsWith("image/")) {
+      userContent += `<br><img src="${chatFileData.base64}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;border:1px solid var(--line)" />`;
+    } else {
+      userContent += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">📎 ${esc(chatFileData.name)}</span>`;
+    }
+  }
+  log.innerHTML += `<div class="chat-row user">
+    <div class="chat-avatar user-avatar">👤</div>
+    <div><div class="chat-bubble">${userContent}</div><div class="chat-time">${fmtTime(now)}</div></div>
+  </div>`;
   log.scrollTop = log.scrollHeight;
-  const ai = document.createElement("div");
-  ai.className = "msg ai"; ai.textContent = "思考中…";
-  log.appendChild(ai); log.scrollTop = log.scrollHeight;
+
+  // AI 思考中
+  const aiRow = document.createElement("div");
+  aiRow.className = "chat-row ai";
+  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">✈️</div><div><div class="chat-bubble" style="color:var(--gray);padding:10px 14px">思考中…</div></div>`;
+  log.appendChild(aiRow);
+  log.scrollTop = log.scrollHeight;
+
   try {
-    const j = await api("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: v }) });
-    ai.textContent = j.reply;
-    // 沉淀档案
-    const ex = await api("/api/profile/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: v }) });
-    STATE.profile.facts = ex.facts; renderFacts();
+    const body = { message: v };
+    if (chatFileData) {
+      body.file = { name: chatFileData.name, type: chatFileData.type, data: chatFileData.base64 };
+    }
+    const j = await api("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    // 更新 AI 回复
+    aiRow.querySelector(".chat-bubble").textContent = "";
+    aiRow.querySelector(".chat-bubble").innerHTML = formatAiReply(j.reply);
+    // 添加时间戳
+    const aiTime = document.createElement("div");
+    aiTime.className = "chat-time";
+    aiTime.textContent = fmtTime(new Date().toISOString());
+    aiRow.querySelector("div > div").appendChild(aiTime);
+
+    // 沉淀档案（仅文字部分）
+    if (v) {
+      const ex = await api("/api/profile/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: v }) });
+      STATE.profile.facts = ex.facts; renderFacts();
+    }
+
     STATE.profile.chatHistory = STATE.profile.chatHistory || [];
-    STATE.profile.chatHistory.push({ role: "user", text: v }, { role: "assistant", text: j.reply });
+    STATE.profile.chatHistory.push(
+      { role: "user", text: v, time: now, ...(chatFileData ? { fileName: chatFileData.name, image: chatFileData.type.startsWith("image/") ? chatFileData.base64 : undefined } : {}) },
+      { role: "assistant", text: j.reply, time: new Date().toISOString() }
+    );
   } catch (e) {
-    ai.textContent = "⚠️ " + e.message + "（你也可以用左侧『手动添加』直接沉淀这条偏好）";
+    aiRow.querySelector(".chat-bubble").textContent = "⚠️ " + e.message + "（你也可以用左侧『手动添加』直接沉淀这条偏好）";
   }
   log.scrollTop = log.scrollHeight;
+
+  // 清除上传预览
+  clearChatUpload();
 });
+
+// 格式化 AI 回复中的 markdown 风格内容
+function formatAiReply(text) {
+  if (!text) return "";
+  return esc(text)
+    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+    .replace(/^- (.*)/gm, "• $1")
+    .replace(/\n/g, "<br>");
+}
+
+// ---------- 聊天区文件上传 ----------
+$("#chatFileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  // 文件大小限制：图片 5MB，文档 10MB
+  const maxSize = file.type.startsWith("image/") ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+  if (file.size > maxSize) { toast("文件太大，请选 " + (maxSize / 1024 / 1024) + "MB 以内的"); e.target.value = ""; return; }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    chatFileData = { name: file.name, type: file.type, base64: reader.result };
+    showChatUploadPreview(file, reader.result);
+  };
+  reader.readAsDataURL(file);
+});
+
+function showChatUploadPreview(file, dataUrl) {
+  const preview = $("#chatUploadPreview");
+  if (file.type.startsWith("image/")) {
+    preview.innerHTML = `<img src="${dataUrl}" /><span class="file-name">📷 ${esc(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span><button class="file-remove" onclick="clearChatUpload()">✕</button>`;
+  } else {
+    preview.innerHTML = `<span style="font-size:24px;margin-right:4px">📄</span><span class="file-name">📎 ${esc(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span><button class="file-remove" onclick="clearChatUpload()">✕</button>`;
+  }
+  preview.classList.add("show");
+}
+function clearChatUpload() {
+  chatFileData = null;
+  const preview = $("#chatUploadPreview");
+  if (preview) { preview.innerHTML = ""; preview.classList.remove("show"); }
+  const input = $("#chatFileInput");
+  if (input) input.value = "";
+}
 
 // 手动记录偏好（无需 API）
 $("#factAddBtn").addEventListener("click", async () => {
@@ -424,4 +542,113 @@ $("#setSave").addEventListener("click", async () => {
   } catch (e) { $("#setMsg").innerHTML = `<span class="msg-line err">${e.message}</span>`; }
 });
 
+// ---------- Agent（嵌入 dsh 的 offer-pilot 技能） ----------
+let AGENT = null;          // 技能元信息缓存
+let AGENT_CURRENT = null;  // 当前打开的工作台 { key, name, history }
+async function loadAgent() {
+  try {
+    AGENT = await api("/api/agent/skills");
+    if (!AGENT.available) {
+      $("#agentUnavailable").style.display = "block";
+      $("#agentSkillGrid").innerHTML = "";
+      return;
+    }
+    // 顶部元信息
+    $("#agentMeta").innerHTML = `
+      技能：<code>${esc(AGENT.name)}</code> · 知识库：
+      <span class="kb-list">${(AGENT.kbFiles || []).map(esc).join("、")}</span>`;
+    // 渲染 4 大功能卡片
+    $("#agentSkillGrid").innerHTML = AGENT.skills.map((s) => `
+      <div class="agent-skill-card ${s.color || "blue"}" data-key="${esc(s.key)}">
+        <div class="agent-skill-head">
+          <div class="agent-skill-name">${esc(s.name)}</div>
+          <div class="agent-skill-num">${s.index}</div>
+        </div>
+        ${s.trigger ? `<div class="agent-skill-trigger"><b>触发：</b>${esc(s.trigger)}</div>` : ""}
+        <div class="agent-skill-steps">
+          ${(s.steps || []).map((st) => `
+            <div class="agent-skill-step">
+              <div class="step-num">${st.num}</div>
+              <div class="step-content"><b>${esc(st.title)}</b>：${esc(st.desc)}</div>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+    // 绑定点击进入工作台
+    $$(".agent-skill-card").forEach((card) => {
+      card.addEventListener("click", () => openAgentWorkspace(card.dataset.key));
+    });
+  } catch (e) {
+    $("#agentSkillGrid").innerHTML = `<span class="hint">⚠️ ${e.message}</span>`;
+  }
+}
+
+function openAgentWorkspace(skillKey) {
+  const skill = AGENT.skills.find((s) => s.key === skillKey);
+  if (!skill) return;
+  AGENT_CURRENT = { key: skill.key, name: skill.name, history: [] };
+  $("#agentCurrentSkill").textContent = skill.name;
+  $("#agentSkillDesc").innerHTML = (skill.trigger ? `<b>触发：</b>${esc(skill.trigger)}<br>` : "") +
+    (skill.steps && skill.steps.length ? `<b>包含子能力：</b>${skill.steps.map((s) => `${s.num}.${esc(s.title)}`).join("、")}` : "");
+  $("#agentChatLog").innerHTML = `<div style="text-align:center;color:var(--gray);padding:40px 0;font-size:13.5px">
+    <div style="font-size:32px;margin-bottom:8px">🤖</div>
+    ${esc(skill.name)} · 已就绪<br><span style="font-size:12px">结合你的知识库（经历库/岗位清单/追踪表/面试备战）回答</span>
+  </div>`;
+  $("#agentInput").value = "";
+  $("#agentWorkspace").style.display = "block";
+  $("#agentInput").focus();
+  // 滚动到工作台
+  $("#agentWorkspace").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+$("#agentBackBtn").addEventListener("click", () => {
+  $("#agentWorkspace").style.display = "none";
+  AGENT_CURRENT = null;
+});
+
+$("#agentSend").addEventListener("click", async () => {
+  if (!AGENT_CURRENT) return;
+  const v = $("#agentInput").value.trim();
+  if (!v) return;
+  $("#agentInput").value = "";
+  const log = $("#agentChatLog");
+  if (log.querySelector("div[style*='text-align:center']")) log.innerHTML = "";
+  const now = new Date().toISOString();
+  // 用户消息
+  log.innerHTML += `<div class="chat-row user">
+    <div class="chat-avatar user-avatar">👤</div>
+    <div><div class="chat-bubble">${esc(v)}</div><div class="chat-time">${fmtTime(now)}</div></div>
+  </div>`;
+  log.scrollTop = log.scrollHeight;
+  // 思考中
+  const aiRow = document.createElement("div");
+  aiRow.className = "chat-row ai";
+  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">🤖</div><div><div class="chat-bubble" style="color:var(--gray)">思考中…</div></div>`;
+  log.appendChild(aiRow); log.scrollTop = log.scrollHeight;
+  try {
+    const j = await api("/api/agent/invoke", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        skillKey: AGENT_CURRENT.key,
+        message: v,
+        history: AGENT_CURRENT.history,
+      }),
+    });
+    aiRow.querySelector(".chat-bubble").textContent = "";
+    aiRow.querySelector(".chat-bubble").innerHTML = formatAiReply(j.reply);
+    const t = document.createElement("div");
+    t.className = "chat-time"; t.textContent = fmtTime(new Date().toISOString());
+    aiRow.querySelector("div > div").appendChild(t);
+    AGENT_CURRENT.history.push({ role: "user", text: v }, { role: "assistant", text: j.reply });
+  } catch (e) {
+    aiRow.querySelector(".chat-bubble").textContent = "⚠️ " + e.message;
+  }
+  log.scrollTop = log.scrollHeight;
+});
+
+// 支持 Cmd+Enter 发送
+$("#agentInput").addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("#agentSend").click(); }
+});
+
 load().catch((e) => toast("加载失败：" + e.message));
+loadAgent().catch((e) => toast("Agent 加载失败：" + e.message));

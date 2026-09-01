@@ -20,6 +20,7 @@
       <button class="tab" data-tab="apps">投递进度</button>
       <button class="tab" data-tab="interview">面邀备战</button>
       <button class="tab" data-tab="works">我的作品</button>
+      <button class="tab" data-tab="agent">🤖 Agent</button>
       <button class="tab" data-tab="settings">设置</button>
     </nav>
     <div id="keyBadge" class="key-badge">API Key：未设置</div>
@@ -44,10 +45,17 @@
         </div>
         <div class="card chat-card">
           <h3>和我聊聊（对话即沉淀档案）</h3>
+          <p class="hint">上传 JD 截图、简历、笔试题等资料，AI 会结合你的档案进行分析。对话内容会自动沉淀为个人偏好。</p>
           <div id="chatLog" class="chat-log"></div>
-          <div class="chat-input">
-            <textarea id="chatInput" placeholder="例如：我其实更想去北京或上海，不太想离老家太远；我比较想做 toC 的 AI 产品…"></textarea>
-            <button id="chatSend">发送</button>
+          <div class="chat-input-area">
+            <div id="chatUploadPreview" class="chat-upload-preview"></div>
+            <div class="chat-input">
+              <label class="chat-upload-btn" title="上传文件（图片/PDF）">📎
+                <input id="chatFileInput" type="file" accept="image/*,.pdf,.txt,.docx" style="display:none" />
+              </label>
+              <textarea id="chatInput" placeholder="输入消息，或上传文件让 AI 分析…"></textarea>
+              <button class="btn primary" id="chatSend">发送</button>
+            </div>
           </div>
         </div>
       </div>
@@ -112,6 +120,36 @@
         <h3>我的 vibecoding AI 作品集</h3>
         <p class="hint">这里汇总你用 vibe coding 做出的所有 AI 作品，可直接写进简历 / 面试展示。</p>
         <div id="worksGrid" class="works-grid"></div>
+      </div>
+    </section>
+
+    <!-- Agent（嵌入 dsh 的 offer-pilot 技能） -->
+    <section class="panel" id="agent">
+      <div class="card">
+        <div class="row-between">
+          <div>
+            <h3>🤖 Agent 工作台</h3>
+            <p class="hint" style="margin-top:4px">从 dsh 嵌入的 <code>offer-pilot</code> 技能——四大功能插件，点开进入独立工作台。</p>
+          </div>
+          <div id="agentMeta" class="agent-meta"></div>
+        </div>
+        <div id="agentUnavailable" class="hint" style="display:none">⚠️ Agent 源文件不可用，请确认 <code>offer-pilot-agent/.dsh/skills/offer-pilot/SKILL.md</code> 存在。</div>
+        <div id="agentSkillGrid" class="agent-skill-grid"></div>
+      </div>
+      <!-- 工作台对话区（点开某个插件后展开） -->
+      <div class="card agent-workspace" id="agentWorkspace" style="display:none">
+        <div class="agent-workspace-header">
+          <button class="btn" id="agentBackBtn">← 返回插件列表</button>
+          <h3 id="agentCurrentSkill" style="margin:0"></h3>
+        </div>
+        <p class="hint" id="agentSkillDesc"></p>
+        <div id="agentChatLog" class="chat-log"></div>
+        <div class="chat-input-area">
+          <div class="chat-input">
+            <textarea id="agentInput" placeholder="描述你的需求，agent 会结合知识库给出建议…"></textarea>
+            <button class="btn primary" id="agentSend">调用</button>
+          </div>
+        </div>
       </div>
     </section>
 

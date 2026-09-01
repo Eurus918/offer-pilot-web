@@ -127,19 +127,52 @@ app.post("/api/config", (req, res) => {
   res.json({ ok: true, hasKey: !!getApiKey() });
 });
 
-// 通用 AI 问答（个人档案页的聊天窗口）
+// 通用 AI 问答（个人档案页的聊天窗口，支持文件上传）
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body || {};
-    if (!message) return res.status(400).json({ error: "消息为空" });
-    store.profile.chatHistory.push({ role: "user", text: message, at: Date.now() });
-    saveStore(store);
+    const { message, file, history = [] } = req.body || {};
+    if (!message && !file) return res.status(400).json({ error: "消息和文件不能都为空" });
+
+    // 构建用户消息内容
+    let userMessage = message || "";
+    let images = [];
+
+    // 处理文件
+    if (file && file.data) {
+      store.profile.chatHistory.push({ role: "user", text: message || `[上传了文件: ${file.name}]`, at: Date.now(), fileName: file.name });
+      saveStore(store);
+
+      if (file.type.startsWith("image/")) {
+        // 图片 → 发给 DeepSeek Vision
+        images.push(file.data);
+        if (!userMessage) userMessage = "请分析这张图片（可能是 JD 截图、简历、笔试题等），结合我的背景给出建议。";
+        else userMessage += "\n\n[附图：请结合图片内容分析]";
+      } else {
+        // 文档（PDF/TXT）→ 将 base64 内容附加到消息中（DeepSeek 不直接支持 PDF，但可以传文本）
+        // 对于 txt 直接解码；对于 pdf 我们提示 AI 这是文档附件
+        const docHint = `\n\n[用户上传了文档：${file.name}，类型：${file.type}。如果这是文本文件，内容已附在后面。如果是 PDF/Word，请基于文件名和上下文分析。]`;
+        userMessage = (userMessage || "请帮我分析这个文件。") + docHint;
+        // 尝试提取文本内容（仅对纯文本文件有效）
+        if (file.type === "text/plain" || file.name.endsWith(".txt")) {
+          try {
+            const textContent = Buffer.from(file.data.split(",")[1] || "", "base64").toString("utf-8");
+            userMessage += "\n\n--- 文档内容 ---\n" + textContent.slice(0, 8000); // 截断防止超长
+          } catch { /* base64 解码失败则忽略 */ }
+        }
+      }
+    } else {
+      store.profile.chatHistory.push({ role: "user", text: message, at: Date.now() });
+      saveStore(store);
+    }
+
     const reply = await dsChat({
       system:
         "你是『Offer Pilot』秋招 AI 产品岗个人助手，服务于用户王辰宇（2027 届，目标 AI 产品经理/大模型产品经理）。" +
         "你了解他的简历（腾讯同频派、结算 Agent、滴滴等经历）。用中文、专业、鼓励的语气回答他关于求职/职业/准备的任何问题。" +
-        "如果他聊到个人偏好（base、就业倾向、顾虑等），你只需自然回应，真正的抽取由另一个接口完成。",
-      user: message,
+        "如果他聊到个人偏好（base、就业倾向、顾虑等），你只需自然回应，真正的抽取由另一个接口完成。" +
+        "当用户上传图片时，仔细阅读图片中的文字内容（JD、简历、笔试题等）并结合他的背景给出具体建议。",
+      user: userMessage,
+      images: images,
       history: history.map((h) => ({ role: h.role, content: h.text })),
     });
     store.profile.chatHistory.push({ role: "assistant", text: reply, at: Date.now() });
@@ -330,6 +363,148 @@ app.post("/api/interviews/:id/remind", async (req, res) => {
     }
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- Agent（嵌入 dsh 的 offer-pilot 技能） ----------
+// 技能源文件路径（外部项目，本机绝对路径，可被 .gitignore 排除）
+const AGENT_SKILL_FILE = "/Users/wangchenyu/WorkBuddy/2026-08-28-11-36-07/offer-pilot-agent/.dsh/skills/offer-pilot/SKILL.md";
+const AGENT_KB_DIR = join(__dirname, "agent-kb"); // 软链到 offer-pilot-agent/知识库/
+
+// 缓存解析结果（SKILL.md 不常变，启动时解析一次）
+let AGENT_CACHE = null;
+function parseAgentSkill() {
+  if (AGENT_CACHE) return AGENT_CACHE;
+  if (!fs.existsSync(AGENT_SKILL_FILE)) {
+    AGENT_CACHE = { available: false, skills: [], kbFiles: [] };
+    return AGENT_CACHE;
+  }
+  const md = fs.readFileSync(AGENT_SKILL_FILE, "utf-8");
+  // 解析 frontmatter
+  const fmMatch = md.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  let meta = {};
+  let body = md;
+  if (fmMatch) {
+    fmMatch[1].split("\n").forEach((line) => {
+      const m = line.match(/^(\S+):\s*(.*)$/);
+      if (m) meta[m[1]] = m[2].trim();
+    });
+    body = fmMatch[2];
+  }
+  // 解析 4 个主功能（以"## 功能"开头的章节）
+  const skills = [];
+  const skillRegex = /##\s*(功能[一二三四0-9]+[、·.\s]*[^\n]*)\n([\s\S]*?)(?=\n##\s|\n---\s*$|$)/g;
+  let m;
+  while ((m = skillRegex.exec(body)) !== null) {
+    const title = m[1].trim();
+    const content = m[2].trim();
+    // 提取触发条件
+    const triggerMatch = content.match(/\*\*触发\*\*[：:]\s*([^\n]+)/);
+    const trigger = triggerMatch ? triggerMatch[1].trim() : "";
+    // 提取子步骤
+    const steps = [];
+    const stepRegex = /(\d+)\.\s+\*\*([^*]+)\*\*[：:]\s*([^\n]+)/g;
+    let sm;
+    while ((sm = stepRegex.exec(content)) !== null) {
+      steps.push({ num: sm[1], title: sm[2].trim(), desc: sm[3].trim() });
+    }
+    // 选个配色
+    const colors = ["blue", "purple", "green", "orange"];
+    const color = colors[skills.length] || "gray";
+    skills.push({
+      key: "skill-" + (skills.length + 1),
+      index: skills.length + 1,
+      name: title,
+      trigger,
+      steps,
+      content,
+      color,
+    });
+  }
+  // 知识库文件列表
+  let kbFiles = [];
+  if (fs.existsSync(AGENT_KB_DIR)) {
+    kbFiles = fs.readdirSync(AGENT_KB_DIR).filter((f) => f.endsWith(".md"));
+  }
+  AGENT_CACHE = {
+    available: true,
+    name: meta.name || "offer-pilot",
+    description: meta.description || "",
+    whenToUse: meta.whenToUse || "",
+    skills,
+    kbFiles,
+    sourceFile: AGENT_SKILL_FILE,
+  };
+  return AGENT_CACHE;
+}
+
+// 读取所有知识库文件内容（拼成上下文）
+function loadKbContext() {
+  if (!fs.existsSync(AGENT_KB_DIR)) return "";
+  const files = fs.readdirSync(AGENT_KB_DIR).filter((f) => f.endsWith(".md"));
+  const parts = [];
+  for (const f of files) {
+    try {
+      const txt = fs.readFileSync(join(AGENT_KB_DIR, f), "utf-8");
+      parts.push(`### ${f}\n${txt}`);
+    } catch { /* 忽略读取失败的文件 */ }
+  }
+  return parts.join("\n\n---\n\n");
+}
+
+// 暴露插件元信息给前端
+app.get("/api/agent/skills", (req, res) => {
+  const a = parseAgentSkill();
+  res.json(a);
+});
+
+// 调用某个插件
+app.post("/api/agent/invoke", async (req, res) => {
+  try {
+    const { skillKey, message, history = [] } = req.body || {};
+    if (!skillKey || !message) return res.status(400).json({ error: "缺少 skillKey 或 message" });
+    const agent = parseAgentSkill();
+    if (!agent.available) return res.status(503).json({ error: "Agent 源文件不可用，请确认 offer-pilot-agent 项目存在" });
+    const skill = agent.skills.find((s) => s.key === skillKey);
+    if (!skill) return res.status(404).json({ error: "找不到插件：" + skillKey });
+
+    // 构造系统提示词：通用约定 + 该功能章节 + 知识库上下文
+    const skillMd = fs.readFileSync(AGENT_SKILL_FILE, "utf-8");
+    // 提取工作准则/工作区约定/输出规范
+    const rules = (skillMd.match(/##\s*工作准则[\s\S]*?(?=\n##\s)/) || [""])[0];
+    const fileConvention = (skillMd.match(/##\s*工作区文件约定[\s\S]*?(?=\n##\s)/) || [""])[0];
+    const outputSpec = (skillMd.match(/##\s*输出规范[\s\S]*?(?=\n---|\n$|$)/) || [""])[0];
+
+    const kbContext = loadKbContext();
+    const system = [
+        "你是「" + agent.name + "」——" + agent.description,
+        "",
+        "## 当前调用的功能",
+        "### " + skill.name,
+        (skill.trigger ? "**触发场景**：" + skill.trigger : ""),
+        "",
+        skill.content,
+        "",
+        "## 通用工作准则",
+        rules,
+        "",
+        fileConvention,
+        "",
+        outputSpec,
+        "",
+        kbContext ? "## 知识库上下文（用户的真实数据）\n" + kbContext : "",
+      ]
+      .filter(Boolean)
+      .join("\n");
+
+    const reply = await dsChat({
+      system,
+      user: message,
+      history: history.map((h) => ({ role: h.role, content: h.text })),
+    });
+    res.json({ reply, skill: { key: skill.key, name: skill.name } });
+  } catch (e) {
+    res.status(e.code || 500).json({ error: friendly(e) });
   }
 });
 
