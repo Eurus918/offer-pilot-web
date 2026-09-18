@@ -54,6 +54,7 @@ ensureStore();
 let store = loadStore();
 // 兼容旧数据：复盘模块为后加，老 store.json 没有 reviews 字段
 if (!Array.isArray(store.reviews)) store.reviews = [];
+if (!Array.isArray(store.offers)) store.offers = [];
 
 // ---------- DeepSeek 代理 ----------
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
@@ -395,6 +396,230 @@ app.post("/api/interviews/:id/remind", async (req, res) => {
     }
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- AI 生成简历（两阶段：先澄清，再生成） ----------
+const RESUME_ASK_SYS =
+  "你是资深简历顾问，服务目标岗位：AI 产品经理 / 大模型产品经理。\n" +
+  "下面是用户档案。请判断：为了写出一份有竞争力的简历，哪些关键信息**缺失或模糊**，必须向用户确认。\n" +
+  "输出严格 JSON：{\"questions\":[{\"q\":\"问题\",\"why\":\"为什么需要这条信息\",\"options\":[\"选项1\",\"选项2\"]}]}\n" +
+  "要求：\n" +
+  "1. 最多 5 个问题，按重要性排序。信息足够时返回空数组。\n" +
+  "2. **不要问档案里已经明确写有的信息**。\n" +
+  "3. 优先追问：量化成果（数字）、关键项目的具体贡献、求职偏好（城市/业务方向）、时间线细节。\n" +
+  "4. options 给 2-4 个常见选项，方便用户点选；没有合适选项就给空数组。\n" +
+  "5. 中文输出。";
+
+const RESUME_WRITE_SYS =
+  "你是资深简历顾问。基于用户档案 + 用户补充回答，为目标岗位写一份针对性简历。\n" +
+  "输出严格 JSON：{\"markdown\":\"简历 Markdown 全文\",\"highlights\":[\"本版简历的 3 个亮点\"],\"tips\":[\"投递前建议调整的 2-3 点\"]}\n" +
+  "简历要求：\n" +
+  "1. 结构：基本信息 / 教育背景 / 实习与工作经历 / 项目经历 / 技能与证书\n" +
+  "2. 每条经历用 STAR 法则，**有数据必须写量化结果**（如 DAU 906 达成 302%、节省 80% 人力）。\n" +
+  "3. **针对目标岗位定制**：突出相关经历，弱化无关内容。\n" +
+  "4. **绝对不要编造**档案和回答中没有的信息；不确定的内容宁可不写。\n" +
+  "5. 中文，专业简洁。Markdown：用 ## 分节，用 - 列点，关键数字加粗。";
+
+// 把档案整理成一段可读文本
+function profileToText() {
+  const p = store.profile || {};
+  const basics = p.basics || {};
+  let t = "【基本信息】\n";
+  for (const [k, v] of Object.entries(basics)) {
+    if (v && typeof v === "string") t += `- ${k}：${v}\n`;
+  }
+  const facts = (p.facts || []).filter((f) => f && (f.key || f.value));
+  if (facts.length) {
+    t += "\n【已沉淀的偏好/事实】\n";
+    for (const f of facts) t += `- ${f.key}：${f.value}\n`;
+  }
+  return t;
+}
+
+// 生成简历：无 answers → 返回待澄清问题；有 answers → 生成简历
+app.post("/api/resume/generate", async (req, res) => {
+  try {
+    const { targetRole, answers = [] } = req.body || {};
+    if (!targetRole || !targetRole.trim()) {
+      return res.status(400).json({ error: "请填写目标岗位" });
+    }
+    const profileText = profileToText();
+
+    // 阶段一：找出信息缺口
+    if (!answers.length) {
+      const raw = await dsChat({
+        system: RESUME_ASK_SYS,
+        user: `目标岗位：${targetRole}\n\n${profileText}\n请列出需要向用户确认的问题。`,
+        json: true,
+      });
+      const j = JSON.parse(raw);
+      return res.json({ stage: "ask", questions: j.questions || [] });
+    }
+
+    // 阶段二：生成简历
+    const answersText = answers.map((a, i) => `${i + 1}. ${a.q}\n   答：${a.a}`).join("\n");
+    const raw = await dsChat({
+      system: RESUME_WRITE_SYS,
+      user:
+        `目标岗位：${targetRole}\n\n${profileText}\n\n【用户补充回答】\n${answersText}\n\n` +
+        `请基于以上内容生成针对性简历。`,
+      json: true,
+    });
+    const j = JSON.parse(raw);
+    const record = {
+      targetRole: targetRole.trim(),
+      markdown: j.markdown || "",
+      highlights: j.highlights || [],
+      tips: j.tips || [],
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    store.resume = record;
+    saveStore(store);
+    res.json({ stage: "done", resume: record });
+  } catch (e) {
+    res.status(e.code || 500).json({ error: friendly(e) });
+  }
+});
+
+// 读取已保存的简历
+app.get("/api/resume", (req, res) => {
+  res.json({ resume: store.resume || null });
+});
+
+// ---------- Offer 对比（薪酬 / 城市成本 / 成长曲线） ----------
+// 城市生活成本基线（月租为合租单间中位数，living 为吃喝交通等月开销，单位元/月）
+const CITY_COST = {
+  "北京": { rent: 3500, living: 2600 },
+  "上海": { rent: 3400, living: 2600 },
+  "深圳": { rent: 3000, living: 2400 },
+  "杭州": { rent: 2600, living: 2300 },
+  "广州": { rent: 2200, living: 2100 },
+  "成都": { rent: 1600, living: 1900 },
+  "武汉": { rent: 1500, living: 1800 },
+  "西安": { rent: 1400, living: 1700 },
+  "南京": { rent: 1900, living: 2000 },
+  "苏州": { rent: 1800, living: 2000 },
+  "长沙": { rent: 1400, living: 1800 },
+  "厦门": { rent: 2000, living: 2100 },
+  "香港": { rent: 8000, living: 5000 },
+  "新加坡": { rent: 7000, living: 4500 },
+  "美国": { rent: 9000, living: 5000 },
+};
+
+// 计算单个 offer 的量化指标
+function calcOffer(o) {
+  const baseMonth = Number(o.baseMonth) || 0;        // 月薪（K）
+  const months = Number(o.months) || 12;              // 发薪月数
+  const bonus = Number(o.bonus) || 0;                 // 年终（万）
+  const equity = Number(o.equity) || 0;               // 期权/年（万，折算）
+  const signOn = Number(o.signOn) || 0;               // 签字费（万，仅首年）
+  const baseYear = (baseMonth * months) / 10;         // 年薪（万）
+  const totalYear = baseYear + bonus + equity;        // 年总包（万）
+  const cost = CITY_COST[o.city] || null;
+  const monthCost = cost ? cost.rent + cost.living : 0;
+  const yearCost = (monthCost * 12) / 10000;          // 年生活成本（万）
+  const netYear = totalYear - yearCost;               // 年可支配（万）
+  return {
+    baseYear: +baseYear.toFixed(1),
+    totalYear: +totalYear.toFixed(1),
+    monthCost,
+    yearCost: +yearCost.toFixed(1),
+    netYear: +netYear.toFixed(1),
+    firstYear: +(totalYear + signOn - yearCost).toFixed(1), // 首年含签字费
+    hasCost: !!cost,
+  };
+}
+
+// 列表
+app.get("/api/offers", (req, res) => {
+  res.json({
+    offers: (store.offers || []).map((o) => ({ ...o, calc: calcOffer(o) })),
+    cities: Object.keys(CITY_COST),
+  });
+});
+
+// 新增
+app.post("/api/offers", (req, res) => {
+  const b = req.body || {};
+  const offer = {
+    id: "of-" + Date.now(),
+    company: b.company || "未填写公司",
+    role: b.role || "",
+    city: b.city || "",
+    level: b.level || "",
+    baseMonth: Number(b.baseMonth) || 0,
+    months: Number(b.months) || 12,
+    bonus: Number(b.bonus) || 0,
+    equity: Number(b.equity) || 0,
+    signOn: Number(b.signOn) || 0,
+    growth: b.growth || "",       // 成长性自评/备注（业务前景、晋升空间）
+    notes: b.notes || "",
+    createdAt: new Date().toISOString().slice(0, 10),
+  };
+  store.offers.push(offer);
+  saveStore(store);
+  res.json({ offer: { ...offer, calc: calcOffer(offer) } });
+});
+
+// 删除
+app.delete("/api/offers/:id", (req, res) => {
+  store.offers = (store.offers || []).filter((x) => x.id !== req.params.id);
+  saveStore(store);
+  res.json({ ok: true });
+});
+
+// AI 全方位对比
+app.post("/api/offers/compare", async (req, res) => {
+  try {
+    const offers = (store.offers || []).map((o) => ({ ...o, calc: calcOffer(o) }));
+    if (offers.length < 2) {
+      return res.status(400).json({ error: "至少需要 2 个 Offer 才能对比" });
+    }
+    const factsText = (store.profile?.facts || [])
+      .map((f) => `- ${f.key}：${f.value}`).join("\n");
+    const offersText = offers.map((o, i) => {
+      const c = o.calc;
+      return `【Offer ${i + 1}】${o.company} · ${o.role}${o.level ? "（" + o.level + "）" : ""}\n` +
+        `- 城市：${o.city || "未填"}\n` +
+        `- 月薪：${o.baseMonth}K × ${o.months}个月 = 年薪 ${c.baseYear}万\n` +
+        `- 年终：${o.bonus}万｜期权/年：${o.equity}万｜签字费：${o.signOn}万\n` +
+        `- 年总包：${c.totalYear}万\n` +
+        `- 当地生活成本：${c.hasCost ? "约 " + c.monthCost + " 元/月（年 " + c.yearCost + " 万），扣除后年可支配约 " + c.netYear + " 万" : "（城市未匹配，未计入）"}\n` +
+        (o.growth ? `- 成长性备注：${o.growth}\n` : "") +
+        (o.notes ? `- 其他：${o.notes}\n` : "");
+    }).join("\n");
+
+    const sys =
+      "你是资深职业顾问，同时精通薪酬分析与职业发展规划。\n" +
+      "用户面临多个 Offer 的选择。请基于给出的量化数据做**客观、有立场**的全方位对比。\n" +
+      "输出严格 JSON：\n" +
+      "{\"summary\":\"一句话结论（明确倾向某一个，并说明核心理由）\",\n" +
+      " \"table\":[{\"item\":\"对比维度\",\"values\":[\"offer1的值\",\"offer2的值\"],\"winner\":\"哪个更好的说明\"}],\n" +
+      " \"payAnalysis\":\"薪酬与购买力对比（含生活成本调整后的实际差距）\",\n" +
+      " \"growthAnalysis\":\"成长曲线对比（业务前景/晋升空间/简历增值/长期天花板）\",\n" +
+      " \"risks\":\"各 Offer 的主要风险点\",\n" +
+      " \"suggestion\":\"最终建议（如果是你，怎么选，为什么）\",\n" +
+      " \"negotiate\":\"可以争取的谈判点（针对倾向的那个 offer）\"}\n" +
+      "要求：\n" +
+      "1. **比较维度至少覆盖**：年总包、扣生活成本后实际可支配、base 稳定性、期权想象空间与风险、城市与通勤、成长曲线、风险。\n" +
+      "2. 有明确立场，不要\"各有优劣\"式和稀泥。\n" +
+      "3. 期权要提示风险（行权条件、流动性、时间成本），不要按面额等同现金。\n" +
+      "4. 中文，具体，用数字说话。";
+
+    const raw = await dsChat({
+      system: sys,
+      user:
+        `用户的已知偏好/事实：\n${factsText || "（暂无）"}\n\n` +
+        `===== 待对比 Offer =====\n${offersText}\n\n请做全方位对比分析。`,
+      json: true,
+    });
+    const j = JSON.parse(raw);
+    store.offerCompare = { ...j, updatedAt: new Date().toISOString().slice(0, 10) };
+    saveStore(store);
+    res.json({ compare: j, offers });
+  } catch (e) {
+    res.status(e.code || 500).json({ error: friendly(e) });
   }
 });
 
