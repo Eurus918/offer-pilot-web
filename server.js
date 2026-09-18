@@ -118,16 +118,21 @@ app.get("/api/state", (req, res) => {
     works: store.works,
     hasKey: !!getApiKey(),
     model: getModel(),
+    theme: store.config.theme || null,
   });
 });
 
 app.post("/api/config", (req, res) => {
-  const { apiKey, model, meeting } = req.body || {};
+  const { apiKey, model, meeting, theme } = req.body || {};
   if (apiKey !== undefined) store.config.apiKey = apiKey.trim();
   if (model) store.config.model = model;
   // 腾讯会议凭证：{ appId, secretId, secretKey, userId }
   if (meeting && typeof meeting === "object") {
     store.config.meeting = { ...(store.config.meeting || {}), ...meeting };
+  }
+  // 皮肤主题：{ id, name, vars: { bg, card, ink, muted, line, primary, "primary-soft", shadow } }
+  if (theme && typeof theme === "object") {
+    store.config.theme = theme;
   }
   store.config.updatedAt = new Date().toISOString().slice(0, 10);
   saveStore(store);
@@ -817,6 +822,34 @@ app.post("/api/reviews/sync", async (req, res) => {
         "③会议未开启云录制或纪要尚未生成 ④2026-02 起新建自建应用需 STS-Token " +
         "⑤该会议属于对方企业（录制在对方，永远拉不到）",
     });
+  }
+});
+
+// AI 生成皮肤主题：上传图片 → Vision 提取配色 → 返回 CSS 变量主题
+app.post("/api/theme/generate", async (req, res) => {
+  try {
+    const { image } = req.body || {};
+    if (!image) return res.status(400).json({ error: "请上传图片" });
+    const sys =
+      "你是 UI 配色设计师。分析用户上传的图片，为产品界面生成一套浅色配色主题。\n" +
+      "返回严格 JSON（不要输出其他内容）：\n" +
+      '{"name":"主题名（2-4字，依据图片风格）","summary":"一句话风格描述","vars":{' +
+      '"bg":"#hex 页面背景（必须接近白色/浅色）","card":"#hex 卡片背景（白色系）",' +
+      '"ink":"#hex 主文字（深色，保证可读）","muted":"#hex 次要文字（中灰）",' +
+      '"line":"#hex 边框（浅灰）","primary":"#hex 主色（从图片最具代表性的颜色提取，饱和适中）",' +
+      '"primary-soft":"#hex 主色的极浅背景色","shadow":"CSS box-shadow 值"}}\n' +
+      "硬性要求：保证浅色界面可读性（bg 亮度>0.9、ink 亮度<0.25）；primary 优先取图片中面积较大的特征色，避免荧光色。";
+    const raw = await dsChat({
+      system: sys,
+      user: "请分析这张图片并生成界面主题。",
+      images: [image],
+      json: true,
+    });
+    const t = JSON.parse(raw);
+    if (!t.vars || !t.vars.primary) throw new Error("模型返回的主题缺少 vars.primary");
+    res.json({ ok: true, theme: { id: "custom", name: t.name || "自定义", summary: t.summary || "", vars: t.vars } });
+  } catch (e) {
+    res.status(e.code || 500).json({ error: friendly(e) });
   }
 });
 

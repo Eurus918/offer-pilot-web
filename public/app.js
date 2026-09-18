@@ -183,20 +183,32 @@ function formatAiReply(text) {
     .replace(/\n/g, "<br>");
 }
 
-// ---------- 聊天区文件上传 ----------
-$("#chatFileInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
+// ---------- 聊天区文件上传（选择 或 直接 Ctrl+V 粘贴） ----------
+function handleChatFile(file) {
   if (!file) return;
   // 文件大小限制：图片 5MB，文档 10MB
   const maxSize = file.type.startsWith("image/") ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
-  if (file.size > maxSize) { toast("文件太大，请选 " + (maxSize / 1024 / 1024) + "MB 以内的"); e.target.value = ""; return; }
-
+  if (file.size > maxSize) { toast("文件太大，请选 " + (maxSize / 1024 / 1024) + "MB 以内的"); return; }
   const reader = new FileReader();
   reader.onload = () => {
-    chatFileData = { name: file.name, type: file.type, base64: reader.result };
+    chatFileData = { name: file.name || "粘贴的图片", type: file.type, base64: reader.result };
     showChatUploadPreview(file, reader.result);
   };
   reader.readAsDataURL(file);
+}
+$("#chatFileInput").addEventListener("change", (e) => {
+  handleChatFile(e.target.files[0]);
+  e.target.value = "";
+});
+// 输入框内直接粘贴：图片（截图）或文件自动作为附件
+$("#chatInput").addEventListener("paste", (e) => {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const item of items) {
+    if (item.kind === "file") {
+      const f = item.getAsFile();
+      if (f) { e.preventDefault(); handleChatFile(f); return; }
+    }
+  }
 });
 
 function showChatUploadPreview(file, dataUrl) {
@@ -966,3 +978,98 @@ $("#mtSave").addEventListener("click", async () => {
   }
 });
 loadMeetingConfig();
+
+// ---------- 皮肤系统：预设 + AI 图片生成 ----------
+const THEME_PRESETS = {
+  business: { id: "business", name: "商务", vars: { bg: "#f7f8fa", card: "#ffffff", ink: "#1a1d23", muted: "#6b7280", line: "#e5e7eb", primary: "#2563eb", "primary-soft": "#eff6ff", shadow: "0 1px 2px rgba(0,0,0,.04)" } },
+  dark:     { id: "dark",     name: "暗夜", vars: { bg: "#17181c", card: "#1f2127", ink: "#e8eaed", muted: "#9aa0a6", line: "#2e3138", primary: "#5b8def", "primary-soft": "#202b3d", shadow: "0 1px 2px rgba(0,0,0,.35)" } },
+  warm:     { id: "warm",     name: "暖橙", vars: { bg: "#faf7f2", card: "#ffffff", ink: "#2b2118", muted: "#8a7a6b", line: "#eadfd2", primary: "#c2571b", "primary-soft": "#fbeee3", shadow: "0 1px 2px rgba(120,80,40,.06)" } },
+  jade:     { id: "jade",     name: "青竹", vars: { bg: "#f4f8f5", card: "#ffffff", ink: "#1a2620", muted: "#6b7f74", line: "#dbe7de", primary: "#0f7b52", "primary-soft": "#e5f3ea", shadow: "0 1px 2px rgba(20,80,50,.05)" } },
+};
+let CURRENT_THEME = null;
+
+function applyTheme(t) {
+  CURRENT_THEME = t || null;
+  const root = document.documentElement.style;
+  const keys = Object.keys(THEME_PRESETS.business.vars);
+  if (!t || !t.vars) { keys.forEach((k) => root.removeProperty("--" + k)); }
+  else for (const [k, v] of Object.entries(t.vars)) root.setProperty("--" + k, v);
+  $$("#themeList .theme-chip").forEach((c) => c.classList.toggle("active", !!(t && c.dataset.tid === t.id)));
+}
+
+function renderThemeList() {
+  const swatch = (t) => `
+    <div class="theme-swatch">
+      <i style="background:${t.vars.primary}"></i>
+      <i style="background:${t.vars["primary-soft"]}"></i>
+      <i style="background:${t.vars.bg}"></i>
+    </div>`;
+  const chips = Object.values(THEME_PRESETS).map((t) => `
+    <div class="theme-chip" data-tid="${t.id}">
+      ${swatch(t)}
+      <div class="theme-name">${t.name}</div>
+    </div>`).join("");
+  const custom = CURRENT_THEME && CURRENT_THEME.id === "custom"
+    ? `<div class="theme-chip" data-tid="custom">
+         ${swatch(CURRENT_THEME)}
+         <div class="theme-name">${esc(CURRENT_THEME.name || "自定义")}</div>
+       </div>` : "";
+  $("#themeList").innerHTML = chips + custom;
+  $$("#themeList .theme-chip").forEach((c) => c.addEventListener("click", () => {
+    const t = THEME_PRESETS[c.dataset.tid];
+    if (!t) return;
+    applyTheme(t);
+    saveTheme(t);
+  }));
+}
+
+async function saveTheme(t) {
+  try {
+    await api("/api/config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme: t }),
+    });
+    toast("皮肤已应用：" + (t.name || "自定义"));
+  } catch (e) { toast("⚠ " + e.message); }
+}
+
+// 上传图片 → AI 提取配色生成主题
+$("#themeImg").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { toast("请上传图片文件"); return; }
+  if (file.size > 5 * 1024 * 1024) { toast("图片请小于 5MB"); return; }
+  const st = $("#themeStatus");
+  st.textContent = "AI 正在分析图片配色…（约 10-20 秒）";
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const j = await api("/api/theme/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: reader.result }),
+      });
+      applyTheme(j.theme);
+      renderThemeList();
+      await saveTheme(j.theme);
+      st.textContent = "已生成「" + (j.theme.name || "自定义") + "」" + (j.theme.summary ? " · " + j.theme.summary : "");
+    } catch (err) {
+      st.textContent = "生成失败：" + err.message;
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+// 初始化：应用已保存的主题（无则商务默认）
+(async () => {
+  try {
+    const st = await api("/api/state");
+    const t = st.theme;
+    if (t && THEME_PRESETS[t.id]) applyTheme(THEME_PRESETS[t.id]);
+    else if (t && t.vars) applyTheme(t);
+    else applyTheme(THEME_PRESETS.business);
+  } catch (e) {
+    applyTheme(THEME_PRESETS.business);
+  }
+  renderThemeList();
+})();
