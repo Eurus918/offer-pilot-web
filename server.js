@@ -2,6 +2,7 @@ import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
+import crypto from "crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = join(__dirname, "data", "store.json");
@@ -121,9 +122,13 @@ app.get("/api/state", (req, res) => {
 });
 
 app.post("/api/config", (req, res) => {
-  const { apiKey, model } = req.body || {};
+  const { apiKey, model, meeting } = req.body || {};
   if (apiKey !== undefined) store.config.apiKey = apiKey.trim();
   if (model) store.config.model = model;
+  // 腾讯会议凭证：{ appId, secretId, secretKey, userId }
+  if (meeting && typeof meeting === "object") {
+    store.config.meeting = { ...(store.config.meeting || {}), ...meeting };
+  }
   store.config.updatedAt = new Date().toISOString().slice(0, 10);
   saveStore(store);
   res.json({ ok: true, hasKey: !!getApiKey() });
@@ -628,14 +633,203 @@ app.get("/api/reviews/summary", (req, res) => {
   });
 });
 
+// ---------- 腾讯会议 API（云录制 + 智能纪要 / 元宝纪要） ----------
+// 官方：GET /v1/smart/minutes/{record_file_id}?llm=3 即元宝纪要（默认）
+// 要求：商业版/企业版/教育版；应用需"查看企业录制"权限；2026-02 起新建自建应用需 STS-Token
+function meetingConfig() {
+  const m = store.config?.meeting || {};
+  return {
+    appId: process.env.TENCENT_MEETING_APP_ID || m.appId || "",
+    sdkId: process.env.TENCENT_MEETING_SDK_ID || m.sdkId || "",
+    secretId: process.env.TENCENT_MEETING_SECRET_ID || m.secretId || "",
+    secretKey: process.env.TENCENT_MEETING_SECRET_KEY || m.secretKey || "",
+    userId: process.env.TENCENT_MEETING_USER_ID || m.userId || "",
+    stsToken: process.env.TENCENT_MEETING_STS_TOKEN || m.stsToken || "",
+  };
+}
+function meetingMissing(cfg) {
+  const need = [];
+  if (!cfg.appId) need.push("appId");
+  if (!cfg.secretKey) need.push("secretKey");
+  if (!cfg.userId) need.push("userId");
+  return need;
+}
+// AK/SK 签名（签名串细节以官方「签名验证」文档为准）
+function meetingSign(method, path, body, cfg) {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const nonce = String(Math.abs(crypto.randomInt(1, 2 ** 31)));
+  const signStr = [
+    method.toUpperCase(),
+    `X-TC-Key:${cfg.appId}`,
+    `X-TC-Nonce:${nonce}`,
+    `X-TC-Timestamp:${timestamp}`,
+    body || "",
+  ].join("\n");
+  const signature = crypto.createHmac("sha256", cfg.secretKey).update(signStr).digest("base64");
+  const headers = {
+    "Content-Type": "application/json",
+    "X-TC-Key": cfg.appId,
+    "X-TC-Timestamp": timestamp,
+    "X-TC-Nonce": nonce,
+    "X-TC-Signature": signature,
+  };
+  if (cfg.sdkId) headers["X-TC-SdkId"] = cfg.sdkId;
+  if (cfg.secretId) headers["X-TC-SecretId"] = cfg.secretId;
+  if (cfg.stsToken) headers["X-TC-STSToken"] = cfg.stsToken; // 2026-02 起新建自建应用必需
+  return headers;
+}
+async function meetingGet(path, cfg) {
+  const res = await fetch("https://api.meeting.qq.com" + path, {
+    method: "GET",
+    headers: meetingSign("GET", path, "", cfg),
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!res.ok) {
+    const e = new Error(
+      `会议接口 ${res.status}：${data?.message || data?.error_msg || data?.error?.message || text.slice(0, 120)}`
+    );
+    e.code = 502;
+    e.detail = data;
+    throw e;
+  }
+  return data;
+}
+// 兼容多种返回结构，抽出纪要纯文本
+function extractMinutesText(j) {
+  if (typeof j === "string") return j.trim();
+  if (!j || typeof j !== "object") return "";
+  for (const k of ["text", "content", "minutes_text", "transcript", "summary"]) {
+    if (typeof j[k] === "string" && j[k].trim()) return j[k].trim();
+  }
+  const d = j.data;
+  if (d && typeof d === "object") {
+    for (const k of ["text", "content", "minutes_text", "transcript", "summary"]) {
+      if (typeof d[k] === "string" && d[k].trim()) return d[k].trim();
+    }
+  }
+  const arr = j.minutes || j.paragraphs || j.chapters || d?.minutes || d?.paragraphs || [];
+  if (Array.isArray(arr) && arr.length) {
+    return arr
+      .map((x) => {
+        if (typeof x === "string") return x;
+        const title = x.title || x.topic || x.speaker || "";
+        const body = x.content || x.text || x.summary || x.sentence || "";
+        return title ? `【${title}】${body}` : body;
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+// 拉取某场会议的元宝纪要
+async function fetchMeetingMinutes(meetingId, cfg) {
+  const q = `operator_id=${encodeURIComponent(cfg.userId)}&operator_id_type=1`;
+  // ① 云录制列表
+  const recRes = await meetingGet(`/v1/records?meeting_id=${encodeURIComponent(meetingId)}&${q}`, cfg);
+  const files = recRes.record_files || recRes.records || recRes.data?.record_files || [];
+  if (!files.length) throw new Error("该会议暂无云录制（需在会议中开启云录制，并等录制+纪要生成完成）");
+  const file = files[0];
+  const recordFileId = file.record_file_id || file.record_file_id_str;
+  if (!recordFileId) throw new Error("录制列表缺少 record_file_id");
+  // ② 智能纪要（llm=3 → 元宝纪要）
+  const minRes = await meetingGet(
+    `/v1/smart/minutes/${recordFileId}?${q}&llm=3`,
+    cfg
+  );
+  const text = extractMinutesText(minRes);
+  if (!text) throw new Error("已取回纪要响应，但未解析出文本内容（接口结构可能与预期不同，见 raw 字段）");
+  return {
+    recordFileId,
+    meetingId: file.meeting_id || meetingId,
+    subject: file.meeting_subject || file.subject || file.meeting_topic || "",
+    text,
+    raw: minRes,
+  };
+}
+// 复用：对一段纪要做 AI 复盘分析
+async function analyzeReviewText(rv) {
+  const raw = await dsChat({
+    system: REVIEW_SYS,
+    user:
+      `公司：${rv.company}\n岗位：${rv.role}\n轮次：${rv.round}\n日期：${rv.date}\n\n` +
+      `===== 面试纪要原文 =====\n${rv.transcript}\n===== 纪要结束 =====\n\n` +
+      `请基于以上纪要做结构化复盘分析，严格按 JSON 格式输出。`,
+    json: true,
+  });
+  return JSON.parse(raw);
+}
+
 // 【预留】腾讯会议 / 元宝 API 自动同步
 // 当前连接器未开通或接口不可用时，返回明确提示，前端据此引导手动粘贴
 app.post("/api/reviews/sync", async (req, res) => {
+  const { meetingId, company, role, round, date } = req.body || {};
+  const cfg = meetingConfig();
+  const need = meetingMissing(cfg);
+  if (need.length) {
+    return res.json({
+      ok: false,
+      stage: "config",
+      message: `尚未配置腾讯会议凭证（缺少：${need.join("、")}）`,
+      fallback: "请在「设置」页填写会议凭证；未配置时仍可手动粘贴纪要。",
+      need,
+    });
+  }
+  if (!meetingId) return res.status(400).json({ error: "请提供会议 ID（meetingId）" });
+  try {
+    const m = await fetchMeetingMinutes(meetingId, cfg);
+    const review = {
+      id: "rv-" + Date.now(),
+      company: company || m.subject || "未填写公司",
+      role: role || "未填写岗位",
+      round: round || "未知轮次",
+      date: date || new Date().toISOString().slice(0, 10),
+      source: "api",
+      transcript: m.text,
+      analysis: null,
+      meetingId: m.meetingId,
+      recordFileId: m.recordFileId,
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    let analyzeError = "";
+    try {
+      review.analysis = await analyzeReviewText(review);
+    } catch (e) {
+      analyzeError = friendly(e);
+    }
+    store.reviews.unshift(review);
+    syncStrengthsToProfile();
+    saveStore(store);
+    res.json({
+      ok: true,
+      review,
+      subject: m.subject,
+      analyzeError: analyzeError || undefined,
+    });
+  } catch (e) {
+    res.status(e.code || 500).json({
+      ok: false,
+      stage: "api",
+      error: friendly(e),
+      hint:
+        "常见原因：①账号非商业版/企业版/教育版 ②应用缺「查看企业录制」权限 " +
+        "③会议未开启云录制或纪要尚未生成 ④2026-02 起新建自建应用需 STS-Token " +
+        "⑤该会议属于对方企业（录制在对方，永远拉不到）",
+    });
+  }
+});
+
+// 会议凭证配置状态（只回传是否配置 + 掩码，不回传密钥明文）
+app.get("/api/meeting/config", (req, res) => {
+  const cfg = meetingConfig();
+  const mask = (v) => (v ? v.slice(0, 4) + "••••" + v.slice(-2) : "");
   res.json({
-    ok: false,
-    message: "自动同步尚未接入：腾讯会议录制与元宝纪要的开放接口当前不可用（需企业授权）。",
-    fallback: "请先在腾讯会议导出/元宝生成纪要，再粘贴到本产品的「面试复盘」中。",
-    todo: "接口位置已预留：待连接器（tmeet / ima）开通后，在此处拉取 meetingId → 转写文本 → 写入 store.reviews",
+    configured: meetingMissing(cfg).length === 0,
+    missing: meetingMissing(cfg),
+    appId: mask(cfg.appId),
+    userId: cfg.userId || "",
+    hasStsToken: !!cfg.stsToken,
   });
 });
 

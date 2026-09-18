@@ -895,10 +895,28 @@ $("#rvCreate").addEventListener("click", async () => {
 
 // 同步腾讯会议纪要（当前为预留接口）
 $("#rvSyncBtn").addEventListener("click", async () => {
+  const mid = prompt("输入腾讯会议 ID（meetingId）\n\n前提：该会议已开启云录制且纪要已生成。\n未配置凭证请先到「设置」页填写。", "");
+  if (!mid || !mid.trim()) return;
+  const btn = $("#rvSyncBtn");
+  const oldText = btn.textContent;
+  btn.textContent = "拉取中"; btn.disabled = true;
   try {
-    const j = await api("/api/reviews/sync", { method: "POST" });
-    toast(j.fallback || j.message || "自动同步暂不可用");
-  } catch (e) { toast("" + e.message); }
+    const j = await api("/api/reviews/sync", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meetingId: mid.trim() }),
+    });
+    if (j.ok) {
+      await loadReviews();
+      openReview(j.review.id);
+      toast(j.analyzeError ? "已拉取，但 AI 分析失败：" + j.analyzeError : "已拉取纪要并完成复盘");
+    } else {
+      toast(j.fallback || j.error || "拉取失败");
+      if (j.hint) console.warn("[会议API]", j.hint);
+    }
+  } catch (e) {
+    toast("⚠ " + e.message);
+  }
+  btn.textContent = oldText; btn.disabled = false;
 });
 
 // 默认填入今天日期
@@ -907,3 +925,44 @@ $("#rvDate").value = new Date().toISOString().slice(0, 10);
 load().catch((e) => toast("加载失败：" + e.message));
 loadAgent().catch((e) => toast("Agent 加载失败：" + e.message));
 loadReviews().catch((e) => toast("复盘加载失败：" + e.message));
+
+
+// ---------- 腾讯会议凭证配置 ----------
+async function loadMeetingConfig() {
+  try {
+    const j = await api("/api/meeting/config");
+    $("#mtStatus").textContent = j.configured
+      ? `已配置（AppId ${j.appId} · 用户 ${j.userId}）`
+      : `未配置（缺少：${(j.missing || []).join("、")}）`;
+  } catch (e) {
+    $("#mtStatus").textContent = "配置状态读取失败";
+  }
+}
+$("#mtSave").addEventListener("click", async () => {
+  const all = {
+    appId: $("#mtAppId").value.trim(),
+    sdkId: $("#mtSdkId").value.trim(),
+    secretId: $("#mtSecretId").value.trim(),
+    secretKey: $("#mtSecretKey").value.trim(),
+    userId: $("#mtUserId").value.trim(),
+    stsToken: $("#mtSts").value.trim(),
+  };
+  const payload = {};
+  for (const [k, v] of Object.entries(all)) if (v) payload[k] = v;
+  if (!Object.keys(payload).length) { toast("请至少填写一项"); return; }
+  try {
+    await api("/api/config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meeting: payload }),
+    });
+    const m = $("#mtMsg");
+    m.textContent = "已保存到本地"; m.className = "msg ok";
+    ["mtAppId", "mtSdkId", "mtSecretId", "mtSecretKey", "mtUserId", "mtSts"].forEach((id) => { $("#" + id).value = ""; });
+    loadMeetingConfig();
+    toast("会议凭证已保存");
+  } catch (e) {
+    const m = $("#mtMsg");
+    m.textContent = "⚠ " + e.message; m.className = "msg err";
+  }
+});
+loadMeetingConfig();

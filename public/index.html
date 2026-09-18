@@ -217,6 +217,22 @@
         </div>
         <p id="setMsg" class="msg"></p>
       </div>
+
+      <div class="card" style="max-width:560px">
+        <h3>腾讯会议 API（可选）</h3>
+        <p class="hint">配置后可自动拉取会议「元宝纪要」生成复盘，不必手动粘贴。<b>前提</b>：商业版/企业版会议账号，且应用具备「查看企业录制」权限。凭证仅存本地 <code>data/store.json</code>。</p>
+        <div class="form">
+          <input id="mtAppId" placeholder="AppId（开放平台 SDK AppID）" />
+          <input id="mtSdkId" placeholder="SdkId（开放平台应用 SdkId）" />
+          <input id="mtSecretId" placeholder="SecretId（可选）" />
+          <input id="mtSecretKey" type="password" placeholder="SecretKey" />
+          <input id="mtUserId" placeholder="UserId（企业内用户标识）" />
+          <input id="mtSts" type="password" placeholder="STS-Token（2026-02 后新建应用必填，可留空）" />
+          <button class="btn primary" id="mtSave">保存会议凭证</button>
+        </div>
+        <p id="mtMsg" class="msg"></p>
+        <p id="mtStatus" class="hint"></p>
+      </div>
     </section>
   </main>
 
