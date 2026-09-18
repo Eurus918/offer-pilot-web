@@ -37,7 +37,7 @@ async function load() {
   const notice = $("#aiNotice");
   if (!STATE.hasKey) {
     notice.style.display = "block";
-    notice.innerHTML = "⚠️ <b>AI 功能未启用</b>：未检测到 DeepSeek API Key（或账户无余额）。已为你预置 <b>携程 / 新浪</b> 的面试备战包，可直接在「面邀备战」查看；配置 Key 后解锁 JD 图生成与 AI 问答。去「设置」填入 sk- 开头的 Key 即可。";
+    notice.innerHTML = "<b>AI 功能未启用</b>：未检测到 DeepSeek API Key（或账户无余额）。已为你预置 <b>携程 / 新浪</b> 的面试备战包，可直接在「面邀备战」查看；配置 Key 后解锁 JD 图生成与 AI 问答。去「设置」填入 sk- 开头的 Key 即可。";
   }
 }
 
@@ -72,7 +72,7 @@ function renderChat() {
   const h = STATE.profile.chatHistory || [];
   if (h.length === 0) {
     log.innerHTML = `<div style="text-align:center;color:var(--gray);padding:40px 0;font-size:13.5px">
-      <div style="font-size:32px;margin-bottom:8px">💬</div>
+      <div style="font-size:32px;margin-bottom:8px"></div>
       开始和 AI 聊聊吧<br><span style="font-size:12px">聊聊你的想法、偏好，或上传资料让 AI 分析</span>
     </div>`;
     return;
@@ -80,8 +80,8 @@ function renderChat() {
   log.innerHTML = h.map((m) => {
     const isUser = m.role === "user";
     const avatar = isUser
-      ? `<div class="chat-avatar user-avatar">👤</div>`
-      : `<div class="chat-avatar ai-avatar">✈️</div>`;
+      ? `<div class="chat-avatar user-avatar">我</div>`
+      : `<div class="chat-avatar ai-avatar">AI</div>`;
     const time = m.time ? fmtTime(m.time) : "";
     // 如果消息附带图片
     let content = esc(m.text);
@@ -89,7 +89,7 @@ function renderChat() {
       content += `<br><img src="${m.image}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;border:1px solid var(--line)" />`;
     }
     if (m.fileName && !m.image) {
-      content += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">📎 ${esc(m.fileName)}</span>`;
+      content += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">${esc(m.fileName)}</span>`;
     }
     return `<div class="chat-row ${isUser ? "user" : "ai"}">
       ${avatar}
@@ -123,11 +123,11 @@ $("#chatSend").addEventListener("click", async () => {
     if (chatFileData.type.startsWith("image/")) {
       userContent += `<br><img src="${chatFileData.base64}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;border:1px solid var(--line)" />`;
     } else {
-      userContent += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">📎 ${esc(chatFileData.name)}</span>`;
+      userContent += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">${esc(chatFileData.name)}</span>`;
     }
   }
   log.innerHTML += `<div class="chat-row user">
-    <div class="chat-avatar user-avatar">👤</div>
+    <div class="chat-avatar user-avatar">我</div>
     <div><div class="chat-bubble">${userContent}</div><div class="chat-time">${fmtTime(now)}</div></div>
   </div>`;
   log.scrollTop = log.scrollHeight;
@@ -135,7 +135,7 @@ $("#chatSend").addEventListener("click", async () => {
   // AI 思考中
   const aiRow = document.createElement("div");
   aiRow.className = "chat-row ai";
-  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">✈️</div><div><div class="chat-bubble" style="color:var(--gray);padding:10px 14px">思考中…</div></div>`;
+  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">AI</div><div><div class="chat-bubble" style="color:var(--gray);padding:10px 14px">思考中…</div></div>`;
   log.appendChild(aiRow);
   log.scrollTop = log.scrollHeight;
 
@@ -166,7 +166,7 @@ $("#chatSend").addEventListener("click", async () => {
       { role: "assistant", text: j.reply, time: new Date().toISOString() }
     );
   } catch (e) {
-    aiRow.querySelector(".chat-bubble").textContent = "⚠️ " + e.message + "（你也可以用左侧『手动添加』直接沉淀这条偏好）";
+    aiRow.querySelector(".chat-bubble").textContent = "" + e.message + "（你也可以用左侧『手动添加』直接沉淀这条偏好）";
   }
   log.scrollTop = log.scrollHeight;
 
@@ -202,9 +202,9 @@ $("#chatFileInput").addEventListener("change", (e) => {
 function showChatUploadPreview(file, dataUrl) {
   const preview = $("#chatUploadPreview");
   if (file.type.startsWith("image/")) {
-    preview.innerHTML = `<img src="${dataUrl}" /><span class="file-name">📷 ${esc(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span><button class="file-remove" onclick="clearChatUpload()">✕</button>`;
+    preview.innerHTML = `<img src="${dataUrl}" /><span class="file-name">${esc(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span><button class="file-remove" onclick="clearChatUpload()"></button>`;
   } else {
-    preview.innerHTML = `<span style="font-size:24px;margin-right:4px">📄</span><span class="file-name">📎 ${esc(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span><button class="file-remove" onclick="clearChatUpload()">✕</button>`;
+    preview.innerHTML = `<span style="font-size:24px;margin-right:4px"></span><span class="file-name">${esc(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span><button class="file-remove" onclick="clearChatUpload()"></button>`;
   }
   preview.classList.add("show");
 }
@@ -226,7 +226,7 @@ $("#factAddBtn").addEventListener("click", async () => {
     STATE.profile.facts = j.facts; renderFacts();
     $("#factKey").value = ""; $("#factValue").value = "";
     toast("已沉淀偏好：" + k);
-  } catch (e) { toast("⚠️ " + e.message); }
+  } catch (e) { toast("" + e.message); }
 });
 
 // ---------- 按阶段智能推荐下一步 ----------
@@ -252,7 +252,7 @@ function getNextDisplay(app) {
   return hints[0] || "待更新";
 }
 const STAGES = [
-  ["screening", "简历筛选中"], ["review", "简历评估中"], ["passed_resume", "已过简历→笔试"],
+  ["screening", "简历筛选中"], ["review", "简历评估中"], ["passed_resume", "已过简历笔试"],
   ["written_pending", "待笔试"], ["written_done", "笔试已结束"], ["ai_interview", "待 AI 面试"],
   ["mian_1", "待一面"], ["mian_2", "待二面"], ["mian_3", "待三面"],
   ["ended", "流程结束"], ["offer", "已 offer"],
@@ -361,7 +361,7 @@ function ddlStatus(ddl) {
   const d = new Date(ddl).getTime();
   const diff = d - now;
   if (diff < 0) return { cls: "overdue", label: "已过期" };
-  if (diff < 24 * 3600 * 1000) return { cls: "soon", label: "⏰ 即将到期" };
+  if (diff < 24 * 3600 * 1000) return { cls: "soon", label: "即将到期" };
   return { cls: "normal", label: fmtDdl(ddl) };
 }
 function fmtDdl(iso) {
@@ -392,7 +392,7 @@ function renderInterviews() {
           <div class="iv-item-actions" style="margin-top:6px;display:flex;gap:6px;align-items:center">
             <input type="datetime-local" class="ddl-edit" data-id="${iv.id}" value="${iv.ddl || ""}" placeholder="截止时间" style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:6px" />
             <button class="btn ddl-save-btn" data-id="${iv.id}" style="padding:4px 10px;font-size:12px">保存DDL</button>
-            ${iv.ddl ? `<button class="btn primary cal-remind-btn" data-id="${iv.id}" style="padding:4px 10px;font-size:12px">📅 日历提醒</button>` : ""}
+            ${iv.ddl ? `<button class="btn primary cal-remind-btn" data-id="${iv.id}" style="padding:4px 10px;font-size:12px">日历提醒</button>` : ""}
           </div>
         </div>`;
       }).join("")
@@ -430,7 +430,7 @@ function renderInterviews() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ddl }),
     }).then(() => { renderInterviews(); toast("DDL 已保存" + (ddl ? `：${fmtDdl(ddl)}` : "（已清除）")); })
-      .catch(() => toast("⚠️ 保存失败"));
+      .catch(() => toast("保存失败"));
   }));
 
   // 日历提醒按钮
@@ -439,12 +439,12 @@ function renderInterviews() {
     const id = btn.dataset.id;
     const iv = STATE.interviews.find((x) => x.id === id);
     if (!iv || !iv.ddl) return;
-    toast("正在创建日历提醒：" + iv.company + " " + iv.role + " → " + new Date(iv.ddl).toLocaleString("zh-CN"));
+    toast("正在创建日历提醒：" + iv.company + " " + iv.role + " " + new Date(iv.ddl).toLocaleString("zh-CN"));
     // 调后端创建日历事件
     fetch("/api/interviews/" + id + "/remind", { method: "POST" })
       .then((r) => r.json())
-      .then((j) => { if (j.ok) toast("✅ 日历提醒已创建！"); else toast("⚠️ " + (j.error || "创建失败")); })
-      .catch(() => toast("⚠️ 日历提醒创建失败，请检查企微连接"));
+      .then((j) => { if (j.ok) toast("日历提醒已创建！"); else toast("" + (j.error || "创建失败")); })
+      .catch(() => toast("日历提醒创建失败，请检查企微连接"));
   }));
 }
 async function openInterview(id) {
@@ -480,7 +480,7 @@ async function openInterview(id) {
       const j = await api("/api/interviews/" + id + "/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: v }) });
       ai.textContent = j.reply;
       iv.chat = iv.chat || []; iv.chat.push({ role: "user", text: v }, { role: "assistant", text: j.reply });
-    } catch (e) { ai.textContent = "⚠️ " + e.message; }
+    } catch (e) { ai.textContent = "" + e.message; }
     log.scrollTop = log.scrollHeight;
   });
 }
@@ -508,7 +508,7 @@ $("#ivCreate").addEventListener("click", async () => {
     STATE.interviews.push(j.interview);
     renderInterviews(); openInterview(j.interview.id);
     toast("备战建议已生成");
-  } catch (e) { toast("⚠️ " + e.message); }
+  } catch (e) { toast("" + e.message); }
   $("#ivCreate").textContent = "生成备战建议";
 });
 
@@ -531,7 +531,7 @@ $("#setSave").addEventListener("click", async () => {
   const model = $("#setModel").value.trim() || "deepseek-chat";
   try {
     const j = await api("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey: key, model }) });
-    $("#setMsg").innerHTML = `<span class="msg-line ok">已保存。${j.hasKey ? "API Key 已设置 ✅" : ""}</span>`;
+    $("#setMsg").innerHTML = `<span class="msg-line ok">已保存。${j.hasKey ? "API Key 已设置 " : ""}</span>`;
     $("#keyBadge").textContent = j.hasKey ? "API Key：已设置" : "API Key：未设置";
     $("#keyBadge").classList.toggle("ok", j.hasKey);
     STATE.hasKey = j.hasKey;
@@ -578,7 +578,7 @@ async function loadAgent() {
       card.addEventListener("click", () => openAgentWorkspace(card.dataset.key));
     });
   } catch (e) {
-    $("#agentSkillGrid").innerHTML = `<span class="hint">⚠️ ${e.message}</span>`;
+    $("#agentSkillGrid").innerHTML = `<span class="hint">${e.message}</span>`;
   }
 }
 
@@ -590,7 +590,7 @@ function openAgentWorkspace(skillKey) {
   $("#agentSkillDesc").innerHTML = (skill.trigger ? `<b>触发：</b>${esc(skill.trigger)}<br>` : "") +
     (skill.steps && skill.steps.length ? `<b>包含子能力：</b>${skill.steps.map((s) => `${s.num}.${esc(s.title)}`).join("、")}` : "");
   $("#agentChatLog").innerHTML = `<div style="text-align:center;color:var(--gray);padding:40px 0;font-size:13.5px">
-    <div style="font-size:32px;margin-bottom:8px">🤖</div>
+    <div style="font-size:32px;margin-bottom:8px"></div>
     ${esc(skill.name)} · 已就绪<br><span style="font-size:12px">结合你的知识库（经历库/岗位清单/追踪表/面试备战）回答</span>
   </div>`;
   $("#agentInput").value = "";
@@ -615,14 +615,14 @@ $("#agentSend").addEventListener("click", async () => {
   const now = new Date().toISOString();
   // 用户消息
   log.innerHTML += `<div class="chat-row user">
-    <div class="chat-avatar user-avatar">👤</div>
+    <div class="chat-avatar user-avatar">我</div>
     <div><div class="chat-bubble">${esc(v)}</div><div class="chat-time">${fmtTime(now)}</div></div>
   </div>`;
   log.scrollTop = log.scrollHeight;
   // 思考中
   const aiRow = document.createElement("div");
   aiRow.className = "chat-row ai";
-  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">🤖</div><div><div class="chat-bubble" style="color:var(--gray)">思考中…</div></div>`;
+  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">AI</div><div><div class="chat-bubble" style="color:var(--gray)">思考中…</div></div>`;
   log.appendChild(aiRow); log.scrollTop = log.scrollHeight;
   try {
     const j = await api("/api/agent/invoke", {
@@ -640,7 +640,7 @@ $("#agentSend").addEventListener("click", async () => {
     aiRow.querySelector("div > div").appendChild(t);
     AGENT_CURRENT.history.push({ role: "user", text: v }, { role: "assistant", text: j.reply });
   } catch (e) {
-    aiRow.querySelector(".chat-bubble").textContent = "⚠️ " + e.message;
+    aiRow.querySelector(".chat-bubble").textContent = "" + e.message;
   }
   log.scrollTop = log.scrollHeight;
 });
@@ -650,7 +650,7 @@ $("#agentInput").addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("#agentSend").click(); }
 });
 
-// ---------- 面试复盘（面试后沉淀，形成"备战→实战→复盘→迭代"闭环） ----------
+// ---------- 面试复盘（面试后沉淀，形成"备战实战复盘迭代"闭环） ----------
 let REVIEWS = [];
 let RV_SUMMARY = null;
 
@@ -661,7 +661,7 @@ async function loadReviews() {
     RV_SUMMARY = sumRes;
     renderReviews();
   } catch (e) {
-    $("#rvList").innerHTML = `<span class="hint">⚠️ ${esc(e.message)}</span>`;
+    $("#rvList").innerHTML = `<span class="hint">${esc(e.message)}</span>`;
   }
 }
 
@@ -674,9 +674,9 @@ function renderTagWall(s) {
     return `<div class="rv-tags"><h4>${emoji} ${title}</h4><div class="tag-list">${tags}</div></div>`;
   };
   return (
-    block("稳定强项（继续保持）", "💪", s.strengths, "good") +
-    block("反复出错点（重点攻克）", "🎯", s.weaknesses, "bad") +
-    block("知识盲区（待补课）", "📖", s.knowledgeGaps, "gap")
+    block("稳定强项（继续保持）", "", s.strengths, "good") +
+    block("反复出错点（重点攻克）", "", s.weaknesses, "bad") +
+    block("知识盲区（待补课）", "", s.knowledgeGaps, "gap")
   );
 }
 
@@ -732,15 +732,15 @@ function openReview(id) {
       <p class="hint">这条复盘还没做 AI 分析（可能当时 Key 未配置或调用失败）。</p>
       <div class="rv-transcript">${esc(rv.transcript.slice(0, 800))}${rv.transcript.length > 800 ? "\n…（已截断）" : ""}</div>
       <div style="margin-top:10px;display:flex;gap:8px">
-        <button class="btn primary" id="rvReAnalyze">🤖 重新分析</button>
-        <button class="btn" id="rvDelete">删除</button>
+        <button class="btn primary" id="rvReAnalyze">重新分析</button>
+        <button class="btn" id="rvEdit">编辑</button><button class="btn" id="rvDelete">删除</button>
       </div>`;
   } else {
     const qaHtml = (a.qa || []).map((item) => `
       <div class="rv-qa">
         <div class="q">Q：${esc(item.q)}</div>
         <div class="a">A：${esc(item.a || "（纪要未记录）")}</div>
-        ${item.comment ? `<div class="cmt ${item.quality || "ok"}">${item.quality === "good" ? "✅" : item.quality === "bad" ? "⚠️" : "➖"} ${esc(item.comment)}</div>` : ""}
+        ${item.comment ? `<div class="cmt ${item.quality || "ok"}">${item.quality === "good" ? "" : item.quality === "bad" ? "" : ""} ${esc(item.comment)}</div>` : ""}
       </div>`).join("");
 
     const listBlock = (title, emoji, arr) =>
@@ -753,19 +753,19 @@ function openReview(id) {
         <h3>${esc(rv.company)} · ${esc(rv.role)}（${esc(rv.round)}）</h3>
         <div style="display:flex;gap:8px;align-items:center">
           ${a.score ? `<span class="rv-score"><div class="v">${a.score}</div><div class="l">分</div></span>` : ""}
-          <button class="btn" id="rvReAnalyze">🤖 重新分析</button>
-          <button class="btn" id="rvDelete">删除</button>
+          <button class="btn" id="rvReAnalyze">重新分析</button>
+          <button class="btn" id="rvEdit">编辑</button><button class="btn" id="rvDelete">删除</button>
         </div>
       </div>
-      ${a.summary ? `<div class="rv-section"><h4>📌 总评</h4><ul><li>${esc(a.summary)}</li></ul></div>` : ""}
-      ${qaHtml ? `<div class="rv-section"><h4>💬 问答复盘</h4>${qaHtml}</div>` : ""}
-      ${listBlock("答得好的（继续保持）", "💪", a.strengths)}
-      ${listBlock("答得不好的（重点攻克）", "🎯", a.weaknesses)}
-      ${listBlock("暴露的知识盲区", "📖", a.knowledgeGaps)}
-      ${listBlock("下一面备战重点", "🚀", a.nextPrep)}
-      ${listBlock("可复用答题框架", "🧩", a.frameworks)}
-      ${listBlock("简历/自我介绍优化提示", "📝", a.resumeHints)}
-      <div class="rv-section"><h4>📄 纪要原文</h4><div class="rv-transcript">${esc(rv.transcript)}</div></div>`;
+      ${a.summary ? `<div class="rv-section"><h4>总评</h4><ul><li>${esc(a.summary)}</li></ul></div>` : ""}
+      ${qaHtml ? `<div class="rv-section"><h4>问答复盘</h4>${qaHtml}</div>` : ""}
+      ${listBlock("答得好的（继续保持）", "", a.strengths)}
+      ${listBlock("答得不好的（重点攻克）", "", a.weaknesses)}
+      ${listBlock("暴露的知识盲区", "", a.knowledgeGaps)}
+      ${listBlock("下一面备战重点", "", a.nextPrep)}
+      ${listBlock("可复用答题框架", "", a.frameworks)}
+      ${listBlock("简历/自我介绍优化提示", "", a.resumeHints)}
+      <div class="rv-section"><h4>纪要原文</h4><div class="rv-transcript">${esc(rv.transcript)}</div></div>`;
   }
 
   $("#rvReAnalyze").addEventListener("click", async () => {
@@ -776,8 +776,8 @@ function openReview(id) {
       if (i >= 0) REVIEWS[i] = j.review;
       await loadReviews();
       openReview(id);
-      toast("重新分析完成 ✅");
-    } catch (e) { toast("⚠️ " + e.message); }
+      toast("重新分析完成 ");
+    } catch (e) { toast("" + e.message); }
   });
   $("#rvDelete").addEventListener("click", async () => {
     if (!confirm("确定删除这条复盘？删除后无法恢复。")) return;
@@ -786,6 +786,68 @@ function openReview(id) {
     await loadReviews();
     toast("已删除");
   });
+  // 编辑表单（默认隐藏；元数据随时改，纪要变更会触发后端自动重新分析）
+  box.insertAdjacentHTML("beforeend", `
+    <div id="rvEditForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+      <h4 style="font-size:13px;margin-bottom:8px">编辑复盘</h4>
+      <div class="form">
+        <div class="form-row">
+          <input id="rvEditCompany" placeholder="公司" />
+          <input id="rvEditRole" placeholder="岗位" />
+        </div>
+        <div class="form-row">
+          <select id="rvEditRound">
+            <option value="AI 面">AI 面</option><option value="一面">一面</option>
+            <option value="二面">二面</option><option value="三面">三面</option>
+            <option value="HR 面">HR 面</option><option value="其他">其他</option>
+          </select>
+          <input id="rvEditDate" type="date" />
+        </div>
+        <textarea id="rvEditTranscript" style="min-height:140px" placeholder="纪要原文"></textarea>
+        <div style="display:flex;gap:8px">
+          <button class="btn primary" id="rvEditSave">保存</button>
+          <button class="btn" id="rvEditCancel">取消</button>
+        </div>
+      </div>
+    </div>`);
+
+  $("#rvEdit").addEventListener("click", () => {
+    const f = $("#rvEditForm");
+    const showing = f.style.display !== "none";
+    f.style.display = showing ? "none" : "block";
+    if (!showing) {
+      $("#rvEditCompany").value = rv.company;
+      $("#rvEditRole").value = rv.role;
+      $("#rvEditRound").value = rv.round;
+      $("#rvEditDate").value = rv.date;
+      $("#rvEditTranscript").value = rv.transcript;
+    }
+  });
+  $("#rvEditCancel").addEventListener("click", () => { $("#rvEditForm").style.display = "none"; });
+  $("#rvEditSave").addEventListener("click", async () => {
+    const btn = $("#rvEditSave");
+    const oldTranscript = rv.transcript;
+    btn.textContent = "保存中…"; btn.disabled = true;
+    try {
+      const j = await api(`/api/reviews/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company: $("#rvEditCompany").value.trim(),
+          role: $("#rvEditRole").value.trim(),
+          round: $("#rvEditRound").value,
+          date: $("#rvEditDate").value,
+          transcript: $("#rvEditTranscript").value,
+        }),
+      });
+      const i = REVIEWS.findIndex((r) => r.id === id);
+      if (i >= 0) REVIEWS[i] = j.review;
+      await loadReviews();
+      openReview(id);
+      toast(j.review.transcript !== oldTranscript ? "已保存，纪要已变更并重新分析" : "已保存");
+    } catch (e) { toast("⚠ " + e.message); }
+    btn.textContent = "保存"; btn.disabled = false;
+  });
+
   box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -796,7 +858,7 @@ $("#rvFile").addEventListener("change", (e) => {
   const reader = new FileReader();
   reader.onload = () => {
     $("#rvTranscript").value = reader.result;
-    $("#rvFileInfo").textContent = `✅ 已读取：${file.name}（${(file.size / 1024).toFixed(1)} KB）`;
+    $("#rvFileInfo").textContent = `已读取：${file.name}（${(file.size / 1024).toFixed(1)} KB）`;
   };
   reader.readAsText(file, "utf-8");
 });
@@ -806,7 +868,7 @@ $("#rvCreate").addEventListener("click", async () => {
   const transcript = $("#rvTranscript").value.trim();
   if (!transcript) { toast("请粘贴面试纪要内容，或上传 txt/md 文件"); return; }
   const btn = $("#rvCreate");
-  btn.textContent = "🤖 AI 分析中…（约 20-40 秒）";
+  btn.textContent = "AI 分析中…（约 20-40 秒）";
   btn.disabled = true;
   try {
     const j = await api("/api/reviews", {
@@ -825,9 +887,9 @@ $("#rvCreate").addEventListener("click", async () => {
     $("#rvFile").value = "";
     await loadReviews();
     if (j.review) openReview(j.review.id);
-    toast(j.analyzeError ? "⚠️ 已保存，但 AI 分析失败：" + j.analyzeError : "复盘完成 ✅");
-  } catch (e) { toast("⚠️ " + e.message); }
-  btn.textContent = "🤖 AI 复盘分析";
+    toast(j.analyzeError ? "已保存，但 AI 分析失败：" + j.analyzeError : "复盘完成 ");
+  } catch (e) { toast("" + e.message); }
+  btn.textContent = "AI 复盘分析";
   btn.disabled = false;
 });
 
@@ -836,7 +898,7 @@ $("#rvSyncBtn").addEventListener("click", async () => {
   try {
     const j = await api("/api/reviews/sync", { method: "POST" });
     toast(j.fallback || j.message || "自动同步暂不可用");
-  } catch (e) { toast("⚠️ " + e.message); }
+  } catch (e) { toast("" + e.message); }
 });
 
 // 默认填入今天日期

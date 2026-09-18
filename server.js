@@ -344,6 +344,19 @@ app.patch("/api/interviews/:id/ddl", (req, res) => {
   res.json({ ok: true, ddl: iv.ddl });
 });
 
+// 编辑面试备战：公司/岗位/JD/类型随时可改
+app.patch("/api/interviews/:id", (req, res) => {
+  const iv = store.interviews.find((x) => x.id === req.params.id);
+  if (!iv) return res.status(404).json({ error: "面试不存在" });
+  const { company, role, jdText, type } = req.body || {};
+  if (company !== undefined) iv.company = company;
+  if (role !== undefined) iv.role = role;
+  if (jdText !== undefined) iv.jdText = jdText;
+  if (type !== undefined) iv.type = type;
+  saveStore(store);
+  res.json({ interview: iv });
+});
+
 // 面邀备战：创建日历提醒（联动企微日历）
 app.post("/api/interviews/:id/remind", async (req, res) => {
   try {
@@ -538,6 +551,40 @@ app.post("/api/reviews/:id/analyze", async (req, res) => {
     });
     rv.analysis = JSON.parse(raw);
     syncStrengthsToProfile(); // 重新分析后重算强弱项
+    saveStore(store);
+    res.json({ review: rv });
+  } catch (e) {
+    res.status(e.code || 500).json({ error: friendly(e) });
+  }
+});
+
+// 编辑复盘：元数据随时可改；纪要变更后默认自动重新分析（reanalyze=false 可跳过）
+app.patch("/api/reviews/:id", async (req, res) => {
+  try {
+    const rv = store.reviews.find((x) => x.id === req.params.id);
+    if (!rv) return res.status(404).json({ error: "复盘不存在" });
+    const { company, role, round, date, transcript, reanalyze } = req.body || {};
+    if (company !== undefined) rv.company = company;
+    if (role !== undefined) rv.role = role;
+    if (round !== undefined) rv.round = round;
+    if (date !== undefined) rv.date = date;
+    let needReanalyze = false;
+    if (transcript !== undefined && transcript.trim() && transcript.trim() !== rv.transcript) {
+      rv.transcript = transcript.trim();
+      needReanalyze = true;
+    }
+    if (reanalyze === true || needReanalyze) {
+      const raw = await dsChat({
+        system: REVIEW_SYS,
+        user:
+          `公司：${rv.company}\n岗位：${rv.role}\n轮次：${rv.round}\n日期：${rv.date}\n\n` +
+          `===== 面试纪要原文 =====\n${rv.transcript}\n===== 纪要结束 =====\n\n` +
+          `请基于以上纪要做结构化复盘分析，严格按 JSON 格式输出。`,
+        json: true,
+      });
+      rv.analysis = JSON.parse(raw);
+      syncStrengthsToProfile();
+    }
     saveStore(store);
     res.json({ review: rv });
   } catch (e) {

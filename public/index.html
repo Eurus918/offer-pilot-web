@@ -9,7 +9,7 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="logo">✈️</span>
+      <span class="logo">OP</span>
       <div>
         <div class="title">Offer Pilot</div>
         <div class="sub">秋招 AI 产品岗 · 个人投递助手</div>
@@ -19,9 +19,9 @@
       <button class="tab active" data-tab="profile">个人档案</button>
       <button class="tab" data-tab="apps">投递进度</button>
       <button class="tab" data-tab="interview">面邀备战</button>
-      <button class="tab" data-tab="review">📝 面试复盘</button>
+      <button class="tab" data-tab="review">面试复盘</button>
       <button class="tab" data-tab="works">我的作品</button>
-      <button class="tab" data-tab="agent">🤖 Agent</button>
+      <button class="tab" data-tab="agent">Agent</button>
       <button class="tab" data-tab="settings">设置</button>
     </nav>
     <div id="keyBadge" class="key-badge">API Key：未设置</div>
@@ -51,8 +51,7 @@
           <div class="chat-input-area">
             <div id="chatUploadPreview" class="chat-upload-preview"></div>
             <div class="chat-input">
-              <label class="chat-upload-btn" title="上传文件（图片/PDF）">📎
-                <input id="chatFileInput" type="file" accept="image/*,.pdf,.txt,.docx" style="display:none" />
+              <label class="chat-upload-btn" title="上传文件（图片/PDF）">                <input id="chatFileInput" type="file" accept="image/*,.pdf,.txt,.docx" style="display:none" />
               </label>
               <textarea id="chatInput" placeholder="输入消息，或上传文件让 AI 分析…"></textarea>
               <button class="btn primary" id="chatSend">发送</button>
@@ -102,11 +101,11 @@
           </div>
 
           <!-- 即将面试 -->
-          <h3 style="margin-top:18px">📋 即将面试 <span id="upcomingCount" class="count-badge">0</span></h3>
+          <h3 style="margin-top:18px">即将面试 <span id="upcomingCount" class="count-badge">0</span></h3>
           <div id="ivUpcoming" class="iv-list"></div>
 
           <!-- 历史面试 -->
-          <h3 style="margin-top:18px">📂 历史面试 <span id="histCount" class="count-badge">0</span></h3>
+          <h3 style="margin-top:18px">历史面试 <span id="histCount" class="count-badge">0</span></h3>
           <div id="ivHistorical" class="iv-list iv-list-hist"></div>
         </div>
         <div class="card" id="ivDetail">
@@ -119,16 +118,16 @@
     <section class="panel" id="review">
       <div class="card">
         <div class="row-between">
-          <h3>📊 复盘总览</h3>
-          <button class="btn" id="rvSyncBtn" title="从腾讯会议/元宝自动同步纪要">🔄 同步会议纪要</button>
+          <h3>复盘总览</h3>
+          <button class="btn" id="rvSyncBtn" title="从腾讯会议/元宝自动同步纪要">同步会议纪要</button>
         </div>
         <p class="hint">每场面试后沉淀一次。AI 会跨场次总结你的<b>稳定强项</b>与<b>反复出错点</b>，并自动迭代备战建议、简历与自我介绍。</p>
         <div id="rvSummary" class="rv-summary"></div>
       </div>
 
       <div class="card">
-        <h3>➕ 新建面试复盘</h3>
-        <p class="hint">腾讯会议录制面试 → 元宝生成纪要 → 粘贴到下方（或上传 .txt/.md 文件），AI 自动做结构化复盘分析。</p>
+        <h3>新建面试复盘</h3>
+        <p class="hint">腾讯会议录制面试 元宝生成纪要 粘贴到下方（或上传 .txt/.md 文件），AI 自动做结构化复盘分析。</p>
         <div class="form">
           <div class="form-row">
             <input id="rvCompany" placeholder="公司，如：字节跳动" />
@@ -150,12 +149,12 @@
             <input id="rvFile" type="file" accept=".txt,.md,.markdown,text/plain" />
           </label>
           <div id="rvFileInfo" class="hint"></div>
-          <button class="btn primary" id="rvCreate">🤖 AI 复盘分析</button>
+          <button class="btn primary" id="rvCreate">AI 复盘分析</button>
         </div>
       </div>
 
       <div class="card">
-        <h3>📚 复盘记录（<span id="rvCount">0</span>）</h3>
+        <h3>复盘记录（<span id="rvCount">0</span>）</h3>
         <div id="rvList" class="rv-list"></div>
       </div>
 
@@ -176,18 +175,18 @@
       <div class="card">
         <div class="row-between">
           <div>
-            <h3>🤖 Agent 工作台</h3>
+            <h3>Agent 工作台</h3>
             <p class="hint" style="margin-top:4px">从 dsh 嵌入的 <code>offer-pilot</code> 技能——四大功能插件，点开进入独立工作台。</p>
           </div>
           <div id="agentMeta" class="agent-meta"></div>
         </div>
-        <div id="agentUnavailable" class="hint" style="display:none">⚠️ Agent 源文件不可用，请确认 <code>offer-pilot-agent/.dsh/skills/offer-pilot/SKILL.md</code> 存在。</div>
+        <div id="agentUnavailable" class="hint" style="display:none">Agent 源文件不可用，请确认 <code>offer-pilot-agent/.dsh/skills/offer-pilot/SKILL.md</code> 存在。</div>
         <div id="agentSkillGrid" class="agent-skill-grid"></div>
       </div>
       <!-- 工作台对话区（点开某个插件后展开） -->
       <div class="card agent-workspace" id="agentWorkspace" style="display:none">
         <div class="agent-workspace-header">
-          <button class="btn" id="agentBackBtn">← 返回插件列表</button>
+          <button class="btn" id="agentBackBtn">返回插件列表</button>
           <h3 id="agentCurrentSkill" style="margin:0"></h3>
         </div>
         <p class="hint" id="agentSkillDesc"></p>
@@ -205,7 +204,7 @@
     <section class="panel" id="settings">
       <div class="card" style="max-width:560px">
         <h3>DeepSeek API Key</h3>
-        <p class="hint">本产品调用 DeepSeek 大模型。Key 仅保存在你本地 <code>data/store.json</code>，不会上传。获取：platform.deepseek.com → API Keys。</p>
+        <p class="hint">本产品调用 DeepSeek 大模型。Key 仅保存在你本地 <code>data/store.json</code>，不会上传。获取：platform.deepseek.com API Keys。</p>
         <div class="form">
           <input id="setKey" type="password" placeholder="sk-..." />
           <input id="setModel" placeholder="模型（默认 deepseek-chat）" list="modelList" />
