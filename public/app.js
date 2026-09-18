@@ -981,10 +981,10 @@ loadMeetingConfig();
 
 // ---------- 皮肤系统：预设 + AI 图片生成 ----------
 const THEME_PRESETS = {
-  business: { id: "business", name: "商务", vars: { bg: "#f7f8fa", card: "#ffffff", ink: "#1a1d23", muted: "#6b7280", line: "#e5e7eb", primary: "#2563eb", "primary-soft": "#eff6ff", shadow: "0 1px 2px rgba(0,0,0,.04)" } },
-  dark:     { id: "dark",     name: "暗夜", vars: { bg: "#17181c", card: "#1f2127", ink: "#e8eaed", muted: "#9aa0a6", line: "#2e3138", primary: "#5b8def", "primary-soft": "#202b3d", shadow: "0 1px 2px rgba(0,0,0,.35)" } },
-  warm:     { id: "warm",     name: "暖橙", vars: { bg: "#faf7f2", card: "#ffffff", ink: "#2b2118", muted: "#8a7a6b", line: "#eadfd2", primary: "#c2571b", "primary-soft": "#fbeee3", shadow: "0 1px 2px rgba(120,80,40,.06)" } },
-  jade:     { id: "jade",     name: "青竹", vars: { bg: "#f4f8f5", card: "#ffffff", ink: "#1a2620", muted: "#6b7f74", line: "#dbe7de", primary: "#0f7b52", "primary-soft": "#e5f3ea", shadow: "0 1px 2px rgba(20,80,50,.05)" } },
+  business: { id: "business", name: "商务", vars: { bg: "#f7f8fa", card: "#ffffff", ink: "#1a1d23", muted: "#6b7280", line: "#e5e7eb", primary: "#2563eb", "primary-soft": "#eff6ff", shadow: "0 1px 2px rgba(0,0,0,.04)", gradient: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", "gradient-soft": "linear-gradient(135deg, #e8f1ff 0%, #f4f8ff 100%)" } },
+  dark:     { id: "dark",     name: "暗夜", vars: { bg: "#17181c", card: "#1f2127", ink: "#e8eaed", muted: "#9aa0a6", line: "#2e3138", primary: "#5b8def", "primary-soft": "#202b3d", shadow: "0 1px 2px rgba(0,0,0,.35)", gradient: "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)", "gradient-soft": "linear-gradient(135deg, #1b2333 0%, #17181c 100%)" } },
+  warm:     { id: "warm",     name: "暖橙", vars: { bg: "#faf7f2", card: "#ffffff", ink: "#2b2118", muted: "#8a7a6b", line: "#eadfd2", primary: "#c2571b", "primary-soft": "#fbeee3", shadow: "0 1px 2px rgba(120,80,40,.06)", gradient: "linear-gradient(135deg, #9a4318 0%, #d97706 100%)", "gradient-soft": "linear-gradient(135deg, #fdf3e8 0%, #faf7f2 100%)" } },
+  jade:     { id: "jade",     name: "青竹", vars: { bg: "#f4f8f5", card: "#ffffff", ink: "#1a2620", muted: "#6b7f74", line: "#dbe7de", primary: "#0f7b52", "primary-soft": "#e5f3ea", shadow: "0 1px 2px rgba(20,80,50,.05)", gradient: "linear-gradient(135deg, #0b5c3e 0%, #10b981 100%)", "gradient-soft": "linear-gradient(135deg, #e6f5ec 0%, #f4f8f5 100%)" } },
 };
 let CURRENT_THEME = null;
 
@@ -1073,3 +1073,213 @@ $("#themeImg").addEventListener("change", (e) => {
   }
   renderThemeList();
 })();
+
+// ---------- AI 生成简历（两阶段） ----------
+let RS_QUESTIONS = [];
+let RS_TARGET = "";
+
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); toast("已复制到剪贴板"); }
+  catch (e) { toast("复制失败，请手动选中复制"); }
+}
+
+$("#rsStart").addEventListener("click", async () => {
+  const target = $("#rsTarget").value.trim();
+  if (!target) { toast("请先填写目标岗位"); return; }
+  RS_TARGET = target;
+  const btn = $("#rsStart");
+  btn.textContent = "分析中…"; btn.disabled = true;
+  try {
+    const j = await api("/api/resume/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetRole: target, answers: [] }),
+    });
+    if (j.stage === "ask") {
+      RS_QUESTIONS = j.questions || [];
+      renderResumeQuestions();
+    } else if (j.stage === "done") {
+      renderResume(j.resume);
+    }
+  } catch (e) { toast("⚠ " + e.message); }
+  btn.textContent = "开始生成"; btn.disabled = false;
+});
+
+function renderResumeQuestions() {
+  const box = $("#rsQuestions");
+  if (!RS_QUESTIONS.length) {
+    box.style.display = "none";
+    generateResumeWithAnswers([]);
+    return;
+  }
+  box.style.display = "block";
+  box.innerHTML = `
+    <h4 style="font-size:13px;margin:12px 0 8px">AI 需要确认以下信息（已跳过档案中已有的内容）</h4>
+    ${RS_QUESTIONS.map((q, i) => `
+      <div class="rv-qa" style="background:var(--bg)">
+        <div class="q">${i + 1}. ${esc(q.q)}</div>
+        <div class="a" style="color:var(--muted)">为什么问：${esc(q.why || "补全简历细节")}</div>
+        ${(q.options && q.options.length)
+          ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+             ${q.options.map((o) => `<span class="rv-tag" style="cursor:pointer" data-opt="${esc(o)}" data-idx="${i}">${esc(o)}</span>`).join("")}
+             </div>` : ""}
+        <textarea class="rs-answer" data-idx="${i}" style="width:100%;margin-top:8px;min-height:54px" placeholder="你的回答…"></textarea>
+      </div>`).join("")}
+    <button class="btn primary" id="rsConfirm" style="margin-top:10px">确认并生成简历</button>`;
+
+  // 点选项快速填充
+  $$("#rsQuestions .rv-tag[data-opt]").forEach((el) => el.addEventListener("click", () => {
+    const ta = $(`.rs-answer[data-idx="${el.dataset.idx}"]`);
+    if (ta) ta.value = el.dataset.opt;
+  }));
+  $("#rsConfirm").addEventListener("click", () => {
+    const answers = RS_QUESTIONS.map((q, i) => ({
+      q: q.q,
+      a: ($(`.rs-answer[data-idx="${i}"]`) || {}).value || "",
+    })).filter((x) => x.a.trim());
+    generateResumeWithAnswers(answers);
+  });
+}
+
+async function generateResumeWithAnswers(answers) {
+  const btn = $("#rsConfirm");
+  if (btn) { btn.textContent = "生成中…（约 30-60 秒）"; btn.disabled = true; }
+  try {
+    const j = await api("/api/resume/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetRole: RS_TARGET, answers }),
+    });
+    if (j.stage === "done") renderResume(j.resume);
+    else if (j.stage === "ask") { RS_QUESTIONS = j.questions; renderResumeQuestions(); }
+  } catch (e) { toast("⚠ " + e.message); }
+}
+
+function renderResume(r) {
+  if (!r) return;
+  $("#rsQuestions").style.display = "none";
+  const hl = (r.highlights || []).map((x) => `<li>${esc(x)}</li>`).join("");
+  const tp = (r.tips || []).map((x) => `<li>${esc(x)}</li>`).join("");
+  $("#rsResult").innerHTML = `
+    <div class="rv-detail-head" style="margin-top:14px">
+      <h3>已生成：${esc(r.targetRole)}<span style="font-weight:400;color:var(--muted);font-size:12px;margin-left:8px">${esc(r.updatedAt || "")}</span></h3>
+      <button class="btn" id="rsCopy">复制简历</button>
+    </div>
+    ${hl ? `<div class="rv-section"><h4>本版亮点</h4><ul>${hl}</ul></div>` : ""}
+    <pre class="rv-transcript" style="max-height:none;font-family:-apple-system,'PingFang SC',sans-serif;line-height:1.75">${esc(r.markdown)}</pre>
+    ${tp ? `<div class="rv-section" style="margin-top:12px"><h4>投递前建议</h4><ul>${tp}</ul></div>` : ""}`;
+  $("#rsCopy").addEventListener("click", () => copyText(r.markdown));
+  toast("简历已生成");
+}
+
+// 载入已保存的简历
+(async () => {
+  try {
+    const j = await api("/api/resume");
+    if (j.resume && j.resume.markdown) renderResume(j.resume);
+  } catch (e) {}
+})();
+
+// ---------- Offer 对比 ----------
+let OFFERS = [];
+
+async function loadOffers() {
+  try {
+    const j = await api("/api/offers");
+    OFFERS = j.offers || [];
+    $("#ofCount").textContent = OFFERS.length;
+    const dl = $("#cityList");
+    if (dl && j.cities) dl.innerHTML = j.cities.map((c) => `<option value="${c}">`).join("");
+    $("#ofList").innerHTML = OFFERS.length
+      ? OFFERS.map((o) => {
+          const c = o.calc || {};
+          return `<div class="rv-item" data-id="${o.id}">
+            <div class="rv-item-head">
+              <div style="min-width:0">
+                <div class="rv-item-title">${esc(o.company)}${o.role ? " · " + esc(o.role) : ""}${o.level ? "（" + esc(o.level) + "）" : ""}</div>
+                <div class="rv-item-meta">${esc(o.city || "未填城市")} · 月薪 ${o.baseMonth}K × ${o.months}月</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:16px;font-weight:700;color:var(--primary)">${c.totalYear || 0} 万</div>
+                <div class="rv-item-meta">年总包</div>
+              </div>
+            </div>
+            <div class="rv-item-meta" style="margin-top:6px">
+              ${c.hasCost
+                ? `生活成本约 ${c.monthCost} 元/月 → 扣后年可支配 <b style="color:var(--ink)">${c.netYear} 万</b>`
+                : "（城市未匹配，未计入生活成本）"}
+              ${o.growth ? `<br>成长性：${esc(o.growth)}` : ""}
+            </div>
+            <div style="margin-top:8px"><button class="btn of-del" data-id="${o.id}" style="font-size:12px;padding:3px 10px">删除</button></div>
+          </div>`;
+        }).join("")
+      : `<span class="hint">还没有录入 Offer。拿到 offer 后填进来，可以做年包、生活成本、成长曲线的全方位对比。</span>`;
+    $$("#ofList .of-del").forEach((b) => b.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await api("/api/offers/" + b.dataset.id, { method: "DELETE" });
+      loadOffers();
+      toast("已删除");
+    }));
+  } catch (e) {
+    $("#ofList").innerHTML = `<span class="hint">⚠ ${esc(e.message)}</span>`;
+  }
+}
+
+$("#ofAdd").addEventListener("click", async () => {
+  const company = $("#ofCompany").value.trim();
+  if (!company) { toast("请填写公司"); return; }
+  try {
+    await api("/api/offers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company,
+        role: $("#ofRole").value.trim(),
+        city: $("#ofCity").value.trim(),
+        level: $("#ofLevel").value.trim(),
+        baseMonth: $("#ofBase").value,
+        months: $("#ofMonths").value || 12,
+        bonus: $("#ofBonus").value || 0,
+        equity: $("#ofEquity").value || 0,
+        signOn: $("#ofSignOn").value || 0,
+        growth: $("#ofGrowth").value.trim(),
+      }),
+    });
+    ["ofCompany", "ofRole", "ofCity", "ofLevel", "ofBase", "ofBonus", "ofEquity", "ofSignOn", "ofGrowth"]
+      .forEach((id) => { $("#" + id).value = ""; });
+    $("#ofMonths").value = 12;
+    await loadOffers();
+    toast("已添加");
+  } catch (e) { toast("⚠ " + e.message); }
+});
+
+$("#ofCompare").addEventListener("click", async () => {
+  const btn = $("#ofCompare");
+  btn.textContent = "AI 对比中…（约 30-60 秒）"; btn.disabled = true;
+  try {
+    const j = await api("/api/offers/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    renderOfferCompare(j.compare);
+  } catch (e) { toast("⚠ " + e.message); }
+  btn.textContent = "AI 全方位对比"; btn.disabled = false;
+});
+
+function renderOfferCompare(c) {
+  if (!c) return;
+  const box = $("#ofCompareResult");
+  box.style.display = "block";
+  const table = (c.table || []).map((r) => `
+    <tr>
+      <td style="padding:6px 10px;font-weight:600;border-bottom:1px solid var(--line)">${esc(r.item)}</td>
+      ${(r.values || []).map((v) => `<td style="padding:6px 10px;border-bottom:1px solid var(--line)">${esc(v)}</td>`).join("")}
+      <td style="padding:6px 10px;border-bottom:1px solid var(--line);color:var(--muted)">${esc(r.winner || "")}</td>
+    </tr>`).join("");
+  const block = (t, emoji, txt) => txt ? `<div class="rv-section"><h4>${emoji} ${t}</h4><div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${esc(txt)}</div></div>` : "";
+  box.innerHTML = `
+    <div class="rv-detail-head"><h3>Offer 对比结论</h3></div>
+    ${c.summary ? `<div class="rv-section"><h4>结论</h4><div style="font-size:13.5px;line-height:1.7;padding:10px 12px;background:var(--bg);border-radius:8px">${esc(c.summary)}</div></div>` : ""}
+    ${table ? `<div class="rv-section"><h4>对比表</h4><table style="width:100%;border-collapse:collapse;font-size:13px">${table}</table></div>` : ""}
+    ${block("薪酬与购买力", "💰", c.payAnalysis)}
+    ${block("成长曲线", "📈", c.growthAnalysis)}
+    ${block("风险提示", "⚠️", c.risks)}
+    ${block("最终建议", "🎯", c.suggestion)}
+    ${block("可谈判的点", "🤝", c.negotiate)}`;
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+loadOffers();
