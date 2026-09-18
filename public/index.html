@@ -20,6 +20,8 @@
       <button class="tab" data-tab="apps">投递进度</button>
       <button class="tab" data-tab="interview">面邀备战</button>
       <button class="tab" data-tab="review">面试复盘</button>
+      <button class="tab" data-tab="resume">简历生成</button>
+      <button class="tab" data-tab="offers">Offer 对比</button>
       <button class="tab" data-tab="works">我的作品</button>
       <button class="tab" data-tab="agent">Agent</button>
       <button class="tab" data-tab="settings">设置</button>
@@ -159,6 +161,59 @@
       </div>
 
       <div class="card" id="rvDetail" style="display:none"></div>
+    </section>
+
+
+    <!-- 简历生成 -->
+    <section class="panel" id="resume">
+      <div class="card">
+        <h3>AI 生成简历</h3>
+        <p class="hint">基于你的档案 + 目标岗位生成针对性简历。<b>信息不确定时 AI 会先向你提问</b>，确认后再生成，绝不编造。</p>
+        <div class="form">
+          <input id="rsTarget" placeholder="目标岗位，如：AI 产品经理（大模型方向）" />
+          <button class="btn primary" id="rsStart">开始生成</button>
+        </div>
+        <div id="rsQuestions" style="display:none"></div>
+        <div id="rsResult"></div>
+      </div>
+    </section>
+
+    <!-- Offer 对比 -->
+    <section class="panel" id="offers">
+      <div class="card">
+        <h3>录入 Offer</h3>
+        <p class="hint">薪资填数字即可（月薪单位 K，其余单位万）。系统会自动折算年包，并按城市生活成本算出<b>实际可支配收入</b>。</p>
+        <div class="form">
+          <div class="form-row">
+            <input id="ofCompany" placeholder="公司" />
+            <input id="ofRole" placeholder="岗位" />
+          </div>
+          <div class="form-row">
+            <input id="ofCity" placeholder="城市（如 北京）" list="cityList" />
+            <datalist id="cityList"></datalist>
+            <input id="ofLevel" placeholder="职级（如 T5 / P5）" />
+          </div>
+          <div class="form-row">
+            <input id="ofBase" type="number" placeholder="月薪（K）" />
+            <input id="ofMonths" type="number" placeholder="发薪月数（如 15）" value="12" />
+          </div>
+          <div class="form-row">
+            <input id="ofBonus" type="number" placeholder="年终（万）" />
+            <input id="ofEquity" type="number" placeholder="期权/年（万）" />
+          </div>
+          <div class="form-row">
+            <input id="ofSignOn" type="number" placeholder="签字费（万）" />
+            <input id="ofGrowth" placeholder="成长性备注（业务前景/晋升）" />
+          </div>
+          <button class="btn primary" id="ofAdd">添加</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>已录入（<span id="ofCount">0</span>）</h3>
+        <div id="ofList" class="rv-list"></div>
+        <button class="btn primary" id="ofCompare" style="margin-top:12px">AI 全方位对比</button>
+      </div>
+      <div class="card" id="ofCompareResult" style="display:none"></div>
     </section>
 
     <!-- 我的作品 -->
