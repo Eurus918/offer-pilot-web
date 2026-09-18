@@ -7,7 +7,10 @@
   --muted: #6b7280;
   --line: #e5e7eb;
   --primary: #2563eb;        /* 克制蓝：比紫更专业、更接近成熟产品 */
+  --primary-2: #3b82f6;
   --primary-soft: #eff6ff;
+  --gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  --gradient-soft: linear-gradient(135deg, #e8f1ff 0%, #f4f8ff 100%);
   --green: #16a34a;
   --yellow: #d97706;
   --red: #dc2626;
@@ -17,7 +20,11 @@
 }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: var(--bg); color: var(--ink); line-height: 1.55; font-size: 14px;
+  background: var(--bg);
+  background-image: linear-gradient(180deg, var(--gradient-soft) 0%, var(--bg) 280px);
+  background-repeat: no-repeat; background-attachment: fixed;
+  color: var(--ink); line-height: 1.6; font-size: 14px;
+  letter-spacing: .02em;  /* 字距加宽，中文更舒展 */
 }
 .topbar {
   display: flex; align-items: center; gap: 20px; padding: 0 22px;
@@ -26,7 +33,8 @@ body {
 }
 .brand { display: flex; align-items: center; gap: 10px; }
 .logo { font-size: 20px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  background: var(--ink); color: #fff; border-radius: 6px; font-size: 13px; font-weight: 700; }
+  background: var(--gradient); color: #fff; border-radius: 6px; font-size: 13px; font-weight: 700;
+  letter-spacing: .04em; }
 .title { font-weight: 650; font-size: 15px; letter-spacing: -.01em; }
 .sub { font-size: 12px; color: var(--muted); }
 .tabs { display: flex; gap: 2px; margin-left: 16px; flex: 1; flex-wrap: wrap; }
@@ -39,7 +47,7 @@ body {
 .tab.active { color: var(--ink); font-weight: 600; background: transparent; }
 .tab.active::after {
   content: ""; position: absolute; left: 12px; right: 12px; bottom: -9px; height: 2px;
-  background: var(--primary); border-radius: 1px;
+  background: var(--gradient); border-radius: 1px;
 }
 .key-badge { font-size: 12px; color: var(--muted); padding: 4px 9px; border: 1px solid var(--line);
   border-radius: 6px; background: var(--bg); }
@@ -84,7 +92,7 @@ h3 { font-size: 14px; margin-bottom: 10px; font-weight: 650; letter-spacing: -.0
   font-size: 12.5px;
   text-align: right;
   white-space: nowrap;
-  background: #fafbfc;
+  background: var(--bg);
   border-right: 1px solid var(--line);
 }
 .kv .kv-val {
@@ -137,10 +145,10 @@ h3 { font-size: 14px; margin-bottom: 10px; font-weight: 650; letter-spacing: -.0
 .chat-row.user .chat-bubble {
   background: var(--primary); color: #fff;
   border-bottom-right-radius: 5px;
-  box-shadow: 0 1px 3px rgba(79,70,229,.18);
+  box-shadow: 0 1px 3px rgba(37,99,235,.25);
 }
 .chat-row.ai .chat-bubble {
-  background: #fff; color: var(--ink);
+  background: var(--card); color: var(--ink);
   border-bottom-left-radius: 5px;
   box-shadow: 0 1px 4px rgba(20,30,60,.06);
   border: 1px solid var(--line);
@@ -179,11 +187,11 @@ h3 { font-size: 14px; margin-bottom: 10px; font-weight: 650; letter-spacing: -.0
   height: 52px; font-family: inherit; font-size: 13.5px;
   transition: border-color .2s;
 }
-.chat-input textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+.chat-input textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
 /* 上传按钮 */
 .chat-upload-btn {
   width: 42px; height: 42px; border-radius: 8px; border: 1px solid var(--line);
-  background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  background: var(--card); cursor: pointer; display: flex; align-items: center; justify-content: center;
   font-size: 19px; flex-shrink: 0; transition: all .15s;
 }
 .chat-upload-btn:hover { background: var(--primary-soft); border-color: var(--primary); }
@@ -191,7 +199,7 @@ h3 { font-size: 14px; margin-bottom: 10px; font-weight: 650; letter-spacing: -.0
   height: 42px; border-radius: 8px; padding: 0 18px; font-size: 14px; flex-shrink: 0;
 }
 .btn {
-  border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 14px;
+  border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 14px;
   cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--ink);
 }
 .btn:hover { background: var(--bg); }
@@ -222,7 +230,7 @@ h3 { font-size: 14px; margin-bottom: 10px; font-weight: 650; letter-spacing: -.0
 .next-text:hover { background: #e0e7ff; }
 .next-input {
   width: 100%; border: 1px solid var(--primary); border-radius: 6px;
-  padding: 3px 6px; font-size: 12px; outline: none; background: #fff;
+  padding: 3px 6px; font-size: 12px; outline: none; background: var(--card);
 }
 .stage { font-size: 12px; padding: 2px 8px; border-radius: 6px; display: inline-block; }
 .s-screening { background: #fee2e2; color: #b91c1c; }
@@ -331,7 +339,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
 @media (max-width: 820px) { .agent-skill-grid { grid-template-columns: 1fr; } }
 .agent-skill-card {
   border: 1px solid var(--line); border-radius: 8px; padding: 16px;
-  cursor: pointer; transition: all .2s; background: #fff; position: relative; overflow: hidden;
+  cursor: pointer; transition: all .2s; background: var(--card); position: relative; overflow: hidden;
 }
 .agent-skill-card::before {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
@@ -359,7 +367,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
 .agent-skill-trigger { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
 .agent-skill-steps { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .agent-skill-step {
-  font-size: 12.5px; padding: 6px 10px; background: #f8f9fc; border-radius: 8px;
+  font-size: 12.5px; padding: 6px 10px; background: var(--bg); border-radius: 8px;
   display: flex; align-items: flex-start; gap: 6px;
 }
 .agent-skill-step .step-num {
@@ -397,7 +405,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
 .rv-tags .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .rv-tag {
   font-size: 12px; padding: 4px 10px; border-radius: 8px; line-height: 1.45;
-  background: #f3f4f6; color: #374151; max-width: 100%;
+  background: var(--bg); color: var(--muted); max-width: 100%;
 }
 .rv-tag b { font-size: 10.5px; opacity: .65; margin-left: 3px; }
 .rv-tag.good { background: #dcfce7; color: #15803d; }
@@ -408,7 +416,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
 .rv-list { display: flex; flex-direction: column; gap: 10px; }
 .rv-item {
   border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
-  cursor: pointer; transition: all .18s; background: #fff;
+  cursor: pointer; transition: all .18s; background: var(--card);
 }
 .rv-item:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgba(20,30,60,.07); }
 .rv-item.active { border-color: var(--primary); background: var(--primary-soft); }
@@ -441,7 +449,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
 /* 问答对 */
 .rv-qa {
   border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
-  background: #fafbfc;
+  background: var(--bg);
 }
 .rv-qa .q { font-size: 13px; font-weight: 600; line-height: 1.5; }
 .rv-qa .a { font-size: 12.5px; color: #4b5563; margin-top: 4px; line-height: 1.55; }
