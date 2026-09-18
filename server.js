@@ -51,6 +51,8 @@ function saveStore(s) {
 }
 ensureStore();
 let store = loadStore();
+// 兼容旧数据：复盘模块为后加，老 store.json 没有 reviews 字段
+if (!Array.isArray(store.reviews)) store.reviews = [];
 
 // ---------- DeepSeek 代理 ----------
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
@@ -270,11 +272,18 @@ app.post("/api/interviews", async (req, res) => {
       chat: [],
       createdAt: new Date().toISOString().slice(0, 10),
     };
+    // 注入历史复盘：同公司 > 近期通用。实现"这次答砸的，下次别再答砸"
+    const reviewCtx = buildReviewContext(interview.company);
+    if (reviewCtx) {
+      interview.usedReviewContext = true; // 标记：本次备战已结合历史复盘
+      console.log(`[info] 备战「${interview.company}」已注入历史复盘上下文`);
+    }
     const sys =
       "你是 Offer Pilot 的面试备战官。结合用户的简历背景（腾讯同频派 DAU906/次留38.46%、结算 Agent 省80%人力、" +
       "滴滴补贴率20%→5%/ROI 转正、AI 产品方向），针对给出的 JD，输出结构化面试备战建议。使用中文。" +
       "返回 JSON：{\"selfIntro\":\"结合该 JD 的 1 分钟自我介绍\",\"questions\":[{\"q\":\"面试官可能问的问题\",\"a\":\"建议回答要点\"}]，" +
-      "\"knowledge\":\"建议提前储备的知识/准备的动作\"}。";
+      "\"knowledge\":\"建议提前储备的知识/准备的动作\"}。" +
+      reviewCtx;
     const userText =
       "公司：" + interview.company + "，岗位：" + interview.role +
       "\nJD 内容：\n" + (jdText || "（见附图）");
@@ -364,6 +373,223 @@ app.post("/api/interviews/:id/remind", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ---------- 面试复盘（面试后沉淀，形成"备战→实战→复盘→迭代"闭环） ----------
+// 复盘分析的系统提示词：从会议纪要中提取结构化复盘
+const REVIEW_SYS =
+  "你是『Offer Pilot』的面试复盘教练，服务用户王辰宇（2027 届，目标 AI 产品经理/大模型产品经理）。\n" +
+  "用户会给你一段腾讯会议面试的纪要（可能是元宝生成的转写稿）。请你像一位严厉但建设性的面试官，**基于纪要原文**做深度复盘。\n\n" +
+  "【用户真实背景，用于判断回答是否到位】\n" +
+  "- 腾讯 PCG 数据服务中心产品策划实习：结算 Agent（90%+ 非标验收自动化、省 80% 人力）；同频派小程序（DAU 906 达成 302%、次留 38.46%）\n" +
+  "- 滴滴生活服务运营实习：补贴率 20%→5%、日均单 200→1000+、ROI -8% 转正、核销率 20%→35%\n" +
+  "- 瑞众人寿银保渠道运营（正式 2 年）；中小学教培创业创始人\n" +
+  "- 中国人民大学国际商务硕士，本科经济学。目标：AI 产品经理 / 大模型产品经理\n\n" +
+  "【输出要求】严格按下面的 JSON 结构输出，不要输出 JSON 以外的内容：\n" +
+  "{\n" +
+  '  "summary": "一句话总评（80 字内，直接说这场面得怎么样、核心问题是什么）",\n' +
+  '  "score": 1-10 的整数（这场面试的整体表现评分）,\n' +
+  '  "qa": [{"q": "面试官问的核心问题", "a": "用户的回答要点（从纪要提炼）", "quality": "good|ok|bad", "comment": "这个回答好在哪/差在哪，一句话"}],\n' +
+  '  "strengths": ["答得好的点，具体到哪个问题答得好、好在哪"],\n' +
+  '  "weaknesses": ["答得不好的点，具体到卡在哪、为什么没答好"],\n' +
+  '  "knowledgeGaps": ["暴露出的知识盲区，要具体到知识点"],\n' +
+  '  "nextPrep": ["如果还有下一面，重点准备什么（要可执行）"],\n' +
+  '  "frameworks": ["从这场面试沉淀出的可复用答题框架/方法论"],\n' +
+  '  "resumeHints": ["简历描述或自我介绍需要优化的地方（若某项目讲不清楚则指出）"]\n' +
+  "}\n\n" +
+  "【分析原则】\n" +
+  "1. **严格基于纪要**，不要臆造纪要里没有的问题或回答。\n" +
+  "2. **weaknesses 要具体**：不要说'表达不够好'，要说'被问到 Agent 的坏case如何处理时，只说了人工兜底，没讲清兜底策略和触发条件'。\n" +
+  "3. **nextPrep 要可执行**：给出下一面具体该补什么、练什么。\n" +
+  "4. **frameworks 要能复用**：从这场面试抽象出下次能直接用的答题套路。\n" +
+  "5. 如果纪要太短或信息不足，就基于已有内容分析，并在 summary 里说明'纪要信息有限'。\n" +
+  "6. 中文输出。";
+
+// 构建「历史复盘上下文」——供面试备战接口注入，实现"复盘→迭代备战"闭环
+function buildReviewContext(company) {
+  if (!Array.isArray(store.reviews) || !store.reviews.length) return "";
+  const analyzed = store.reviews.filter((r) => r.analysis);
+  if (!analyzed.length) return "";
+
+  // 同公司的复盘最相关；没有同公司的就用最近的几条
+  const sameCompany = company ? analyzed.filter((r) => r.company === company) : [];
+  const relevant = sameCompany.length ? sameCompany : analyzed.slice(0, 3);
+
+  let ctx = "\n\n===== 【重要】用户历史面试复盘，务必针对性强化 =====\n";
+  if (sameCompany.length) {
+    ctx += `以下是用户在「${company}」的历史面试复盘——这些是之前被问到且答得不好的地方，本次备战必须重点覆盖、不能再答砸：\n`;
+  } else {
+    ctx += `以下是用户近期面试暴露的反复出错点，备战时要有针对性预防：\n`;
+  }
+
+  for (const r of relevant.slice(0, 3)) {
+    const a = r.analysis;
+    ctx += `\n— ${r.company} · ${r.role} · ${r.round}（表现分 ${a.score || "?"}/10）\n`;
+    if (a.weaknesses && a.weaknesses.length) {
+      ctx += `  答得不好的：\n${a.weaknesses.map((w) => `    · ${w}`).join("\n")}\n`;
+    }
+    if (a.knowledgeGaps && a.knowledgeGaps.length) {
+      ctx += `  知识盲区：\n${a.knowledgeGaps.slice(0, 6).map((g) => `    · ${g}`).join("\n")}\n`;
+    }
+    if (a.nextPrep && a.nextPrep.length) {
+      ctx += `  上次定的改进重点：\n${a.nextPrep.map((p) => `    · ${p}`).join("\n")}\n`;
+    }
+  }
+
+  ctx += `\n【硬性要求】\n`;
+  ctx += `1. 在 questions 中，必须优先覆盖上述薄弱环节（尤其是被判为"答得不好"的同类问题），并给出这次应该怎么答。\n`;
+  ctx += `2. 在 knowledge 中，针对上述知识盲区给出可执行的补课清单。\n`;
+  ctx += `3. 在 selfIntro 中，避开之前暴露的表述问题（如过于泛泛、缺少 AI 产品方法论）。\n`;
+  ctx += `4. 如果用户已有复盘记录，可在 questions 里加一条"上次面试栽过的坑，这次怎么答得更好"。\n`;
+  return ctx;
+}
+
+// 把跨场复盘的强弱项沉淀到个人档案（profile.facts），实现"越面越了解自己"
+function syncStrengthsToProfile() {
+  const analyzed = (store.reviews || []).filter((r) => r.analysis);
+  if (!analyzed.length) return;
+
+  const sCount = new Map();
+  const wCount = new Map();
+  for (const r of analyzed) {
+    for (const s of r.analysis.strengths || []) sCount.set(s, (sCount.get(s) || 0) + 1);
+    for (const w of r.analysis.weaknesses || []) wCount.set(w, (wCount.get(w) || 0) + 1);
+  }
+  const top = (m, n) => [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([t]) => t);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const map = new Map((store.profile.facts || []).map((f) => [f.key, f]));
+
+  const topS = top(sCount, 3);
+  const topW = top(wCount, 3);
+  if (topS.length) {
+    map.set("💪 面试稳定强项", { key: "💪 面试稳定强项", value: topS.join("；"), source: "复盘沉淀", updatedAt: today });
+  }
+  if (topW.length) {
+    map.set("🎯 面试反复出错点", { key: "🎯 面试反复出错点", value: topW.join("；"), source: "复盘沉淀", updatedAt: today });
+  }
+  store.profile.facts = [...map.values()];
+}
+
+// 列出所有复盘
+app.get("/api/reviews", (req, res) => {
+  res.json({ reviews: store.reviews });
+});
+
+// 新建复盘（粘贴文本或上传文件内容），并自动做 AI 分析
+app.post("/api/reviews", async (req, res) => {
+  try {
+    const { company, role, round, date, transcript, source = "manual" } = req.body || {};
+    if (!transcript || !transcript.trim()) {
+      return res.status(400).json({ error: "请粘贴面试纪要内容" });
+    }
+    const review = {
+      id: "rv-" + Date.now(),
+      company: company || "未填写公司",
+      role: role || "未填写岗位",
+      round: round || "未知轮次",
+      date: date || new Date().toISOString().slice(0, 10),
+      source, // manual=粘贴 / file=文件上传 / api=腾讯会议同步（预留）
+      transcript: transcript.trim(),
+      analysis: null,
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+
+    // 自动 AI 分析
+    let analysis = null;
+    let analyzeError = "";
+    try {
+      const raw = await dsChat({
+        system: REVIEW_SYS,
+        user:
+          `公司：${review.company}\n岗位：${review.role}\n轮次：${review.round}\n日期：${review.date}\n\n` +
+          `===== 面试纪要原文 =====\n${review.transcript}\n===== 纪要结束 =====\n\n` +
+          `请基于以上纪要做结构化复盘分析，严格按 JSON 格式输出。`,
+        json: true,
+      });
+      analysis = JSON.parse(raw);
+    } catch (e) {
+      analyzeError = friendly(e);
+      console.warn("[warn] 复盘 AI 分析失败:", analyzeError);
+    }
+
+    review.analysis = analysis;
+    store.reviews.unshift(review); // 最新的排前面
+    syncStrengthsToProfile(); // 沉淀强弱项到个人档案
+    saveStore(store);
+    res.json({ review, analyzeError: analyzeError || undefined });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 重新分析某条复盘（比如换了模型、或想再跑一次）
+app.post("/api/reviews/:id/analyze", async (req, res) => {
+  try {
+    const rv = store.reviews.find((x) => x.id === req.params.id);
+    if (!rv) return res.status(404).json({ error: "复盘不存在" });
+    const raw = await dsChat({
+      system: REVIEW_SYS,
+      user:
+        `公司：${rv.company}\n岗位：${rv.role}\n轮次：${rv.round}\n日期：${rv.date}\n\n` +
+        `===== 面试纪要原文 =====\n${rv.transcript}\n===== 纪要结束 =====\n\n` +
+        `请基于以上纪要做结构化复盘分析，严格按 JSON 格式输出。`,
+      json: true,
+    });
+    rv.analysis = JSON.parse(raw);
+    syncStrengthsToProfile(); // 重新分析后重算强弱项
+    saveStore(store);
+    res.json({ review: rv });
+  } catch (e) {
+    res.status(e.code || 500).json({ error: friendly(e) });
+  }
+});
+
+// 删除复盘
+app.delete("/api/reviews/:id", (req, res) => {
+  const before = store.reviews.length;
+  store.reviews = store.reviews.filter((x) => x.id !== req.params.id);
+  syncStrengthsToProfile(); // 删除后重算强弱项
+  saveStore(store);
+  res.json({ ok: true, deleted: before - store.reviews.length });
+});
+
+// 跨复盘汇总：沉淀稳定强项 + 反复出错点（用于个人档案）
+app.get("/api/reviews/summary", (req, res) => {
+  const analyzed = store.reviews.filter((r) => r.analysis);
+  const strengthCount = new Map();
+  const weaknessCount = new Map();
+  const gapCount = new Map();
+
+  for (const r of analyzed) {
+    const a = r.analysis;
+    for (const s of a.strengths || []) strengthCount.set(s, (strengthCount.get(s) || 0) + 1);
+    for (const w of a.weaknesses || []) weaknessCount.set(w, (weaknessCount.get(w) || 0) + 1);
+    for (const g of a.knowledgeGaps || []) gapCount.set(g, (gapCount.get(g) || 0) + 1);
+  }
+
+  const sortDesc = (m) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([text, count]) => ({ text, count }));
+  res.json({
+    total: store.reviews.length,
+    analyzedCount: analyzed.length,
+    avgScore: analyzed.length
+      ? (analyzed.reduce((s, r) => s + (Number(r.analysis.score) || 0), 0) / analyzed.length).toFixed(1)
+      : null,
+    strengths: sortDesc(strengthCount),
+    weaknesses: sortDesc(weaknessCount),
+    knowledgeGaps: sortDesc(gapCount),
+  });
+});
+
+// 【预留】腾讯会议 / 元宝 API 自动同步
+// 当前连接器未开通或接口不可用时，返回明确提示，前端据此引导手动粘贴
+app.post("/api/reviews/sync", async (req, res) => {
+  res.json({
+    ok: false,
+    message: "自动同步尚未接入：腾讯会议录制与元宝纪要的开放接口当前不可用（需企业授权）。",
+    fallback: "请先在腾讯会议导出/元宝生成纪要，再粘贴到本产品的「面试复盘」中。",
+    todo: "接口位置已预留：待连接器（tmeet / ima）开通后，在此处拉取 meetingId → 转写文本 → 写入 store.reviews",
+  });
 });
 
 // ---------- Agent（嵌入 dsh 的 offer-pilot 技能） ----------

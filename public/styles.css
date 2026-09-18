@@ -366,3 +366,81 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
   display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
 }
 .agent-workspace-header h3 { margin: 0; }
+
+/* ===== 面试复盘 ===== */
+/* 统计行：4 个数字卡片并排 */
+.rv-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; margin-top: 10px;
+}
+.rv-stat {
+  background: var(--bg); border-radius: 10px; padding: 10px 12px; text-align: center;
+}
+.rv-stat .num { font-size: 20px; font-weight: 700; color: var(--primary); line-height: 1.2; }
+.rv-stat .label { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+/* 标签墙：全宽 */
+.rv-tags { margin-top: 14px; }
+.rv-tags h4 {
+  font-size: 12.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.rv-tags .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.rv-tag {
+  font-size: 12px; padding: 4px 10px; border-radius: 8px; line-height: 1.45;
+  background: #f3f4f6; color: #374151; max-width: 100%;
+}
+.rv-tag b { font-size: 10.5px; opacity: .65; margin-left: 3px; }
+.rv-tag.good { background: #dcfce7; color: #15803d; }
+.rv-tag.bad { background: #fee2e2; color: #b91c1c; }
+.rv-tag.gap { background: #ffedd5; color: #c2410c; }
+
+/* 复盘列表 */
+.rv-list { display: flex; flex-direction: column; gap: 10px; }
+.rv-item {
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  cursor: pointer; transition: all .18s; background: #fff;
+}
+.rv-item:hover { border-color: var(--primary); box-shadow: 0 4px 14px rgba(20,30,60,.07); }
+.rv-item.active { border-color: var(--primary); background: var(--primary-soft); }
+.rv-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.rv-item-title { font-size: 14px; font-weight: 700; }
+.rv-item-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.rv-score {
+  flex-shrink: 0; min-width: 42px; height: 42px; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-weight: 700;
+}
+.rv-score .v { font-size: 17px; line-height: 1; }
+.rv-score .l { font-size: 9px; opacity: .85; margin-top: 1px; }
+.rv-score.none { background: #e5e7eb; color: #9ca3af; }
+.rv-item-summary { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+/* 复盘详情 */
+.rv-detail-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: 10px; border-bottom: 2px solid var(--primary); margin-bottom: 12px;
+}
+.rv-detail-head h3 { margin: 0; }
+.rv-section { margin-bottom: 14px; }
+.rv-section h4 {
+  font-size: 13px; color: var(--primary); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 5px;
+}
+.rv-section ul { padding-left: 18px; }
+.rv-section li { font-size: 13px; margin-bottom: 4px; line-height: 1.55; }
+/* 问答对 */
+.rv-qa {
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+  background: #fafbfc;
+}
+.rv-qa .q { font-size: 13px; font-weight: 600; line-height: 1.5; }
+.rv-qa .a { font-size: 12.5px; color: #4b5563; margin-top: 4px; line-height: 1.55; }
+.rv-qa .cmt { font-size: 12px; margin-top: 5px; padding: 5px 8px; border-radius: 6px; line-height: 1.5; }
+.rv-qa .cmt.good { background: #dcfce7; color: #15803d; }
+.rv-qa .cmt.ok { background: #fef3c7; color: #92400e; }
+.rv-qa .cmt.bad { background: #fee2e2; color: #b91c1c; }
+/* 纪要原文（可折叠） */
+.rv-transcript {
+  background: #f8fafc; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font-size: 12.5px; line-height: 1.65; color: #475569;
+  white-space: pre-wrap; max-height: 220px; overflow-y: auto;
+}

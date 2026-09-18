@@ -650,5 +650,198 @@ $("#agentInput").addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("#agentSend").click(); }
 });
 
+// ---------- 面试复盘（面试后沉淀，形成"备战→实战→复盘→迭代"闭环） ----------
+let REVIEWS = [];
+let RV_SUMMARY = null;
+
+async function loadReviews() {
+  try {
+    const [listRes, sumRes] = await Promise.all([api("/api/reviews"), api("/api/reviews/summary")]);
+    REVIEWS = listRes.reviews || [];
+    RV_SUMMARY = sumRes;
+    renderReviews();
+  } catch (e) {
+    $("#rvList").innerHTML = `<span class="hint">⚠️ ${esc(e.message)}</span>`;
+  }
+}
+
+function renderTagWall(s) {
+  if (!s) return "";
+  const clip = (t) => (t.length > 56 ? t.slice(0, 56) + "…" : t);
+  const block = (title, emoji, items, cls) => {
+    if (!items || !items.length) return "";
+    const tags = items.slice(0, 6).map((t) => `<span class="rv-tag ${cls}">${esc(clip(t.text))}${t.count > 1 ? `<b>×${t.count}</b>` : ""}</span>`).join("");
+    return `<div class="rv-tags"><h4>${emoji} ${title}</h4><div class="tag-list">${tags}</div></div>`;
+  };
+  return (
+    block("稳定强项（继续保持）", "💪", s.strengths, "good") +
+    block("反复出错点（重点攻克）", "🎯", s.weaknesses, "bad") +
+    block("知识盲区（待补课）", "📖", s.knowledgeGaps, "gap")
+  );
+}
+
+function renderReviews() {
+  const s = RV_SUMMARY || {};
+  $("#rvCount").textContent = REVIEWS.length;
+
+  $("#rvSummary").innerHTML = `
+    <div class="rv-stats">
+      <div class="rv-stat"><div class="num">${s.total || 0}</div><div class="label">复盘场次</div></div>
+      <div class="rv-stat"><div class="num">${s.avgScore || "—"}</div><div class="label">平均表现分</div></div>
+      <div class="rv-stat"><div class="num">${(s.weaknesses || []).length}</div><div class="label">待改进点</div></div>
+      <div class="rv-stat"><div class="num">${(s.knowledgeGaps || []).length}</div><div class="label">知识盲区</div></div>
+    </div>
+    ${renderTagWall(s)}`;
+
+  $("#rvList").innerHTML = REVIEWS.length
+    ? REVIEWS.map((rv) => {
+        const a = rv.analysis || {};
+        const score = a.score
+          ? `<div class="rv-score"><div class="v">${a.score}</div><div class="l">分</div></div>`
+          : `<div class="rv-score none"><div class="v">—</div><div class="l">待分析</div></div>`;
+        return `<div class="rv-item" data-id="${rv.id}">
+          <div class="rv-item-head">
+            <div style="min-width:0">
+              <div class="rv-item-title">${esc(rv.company)} · ${esc(rv.role)}</div>
+              <div class="rv-item-meta">${esc(rv.round)} · ${esc(rv.date)}</div>
+            </div>
+            ${score}
+          </div>
+          ${a.summary ? `<div class="rv-item-summary">${esc(a.summary)}</div>` : ""}
+        </div>`;
+      }).join("")
+    : `<span class="hint">还没有复盘记录。面完一场就沉淀一次，AI 会帮你越面越强。</span>`;
+
+  $$("#rvList .rv-item").forEach((el) => el.addEventListener("click", () => openReview(el.dataset.id)));
+}
+
+function openReview(id) {
+  const rv = REVIEWS.find((r) => r.id === id);
+  if (!rv) return;
+  $$("#rvList .rv-item").forEach((x) => x.classList.remove("active"));
+  const el = $(`#rvList .rv-item[data-id="${id}"]`);
+  if (el) el.classList.add("active");
+
+  const a = rv.analysis;
+  const box = $("#rvDetail");
+  box.style.display = "block";
+
+  if (!a) {
+    box.innerHTML = `
+      <div class="rv-detail-head"><h3>${esc(rv.company)} · ${esc(rv.role)}（${esc(rv.round)}）</h3></div>
+      <p class="hint">这条复盘还没做 AI 分析（可能当时 Key 未配置或调用失败）。</p>
+      <div class="rv-transcript">${esc(rv.transcript.slice(0, 800))}${rv.transcript.length > 800 ? "\n…（已截断）" : ""}</div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn primary" id="rvReAnalyze">🤖 重新分析</button>
+        <button class="btn" id="rvDelete">删除</button>
+      </div>`;
+  } else {
+    const qaHtml = (a.qa || []).map((item) => `
+      <div class="rv-qa">
+        <div class="q">Q：${esc(item.q)}</div>
+        <div class="a">A：${esc(item.a || "（纪要未记录）")}</div>
+        ${item.comment ? `<div class="cmt ${item.quality || "ok"}">${item.quality === "good" ? "✅" : item.quality === "bad" ? "⚠️" : "➖"} ${esc(item.comment)}</div>` : ""}
+      </div>`).join("");
+
+    const listBlock = (title, emoji, arr) =>
+      arr && arr.length
+        ? `<div class="rv-section"><h4>${emoji} ${title}</h4><ul>${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`
+        : "";
+
+    box.innerHTML = `
+      <div class="rv-detail-head">
+        <h3>${esc(rv.company)} · ${esc(rv.role)}（${esc(rv.round)}）</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${a.score ? `<span class="rv-score"><div class="v">${a.score}</div><div class="l">分</div></span>` : ""}
+          <button class="btn" id="rvReAnalyze">🤖 重新分析</button>
+          <button class="btn" id="rvDelete">删除</button>
+        </div>
+      </div>
+      ${a.summary ? `<div class="rv-section"><h4>📌 总评</h4><ul><li>${esc(a.summary)}</li></ul></div>` : ""}
+      ${qaHtml ? `<div class="rv-section"><h4>💬 问答复盘</h4>${qaHtml}</div>` : ""}
+      ${listBlock("答得好的（继续保持）", "💪", a.strengths)}
+      ${listBlock("答得不好的（重点攻克）", "🎯", a.weaknesses)}
+      ${listBlock("暴露的知识盲区", "📖", a.knowledgeGaps)}
+      ${listBlock("下一面备战重点", "🚀", a.nextPrep)}
+      ${listBlock("可复用答题框架", "🧩", a.frameworks)}
+      ${listBlock("简历/自我介绍优化提示", "📝", a.resumeHints)}
+      <div class="rv-section"><h4>📄 纪要原文</h4><div class="rv-transcript">${esc(rv.transcript)}</div></div>`;
+  }
+
+  $("#rvReAnalyze").addEventListener("click", async () => {
+    $("#rvReAnalyze").textContent = "分析中…";
+    try {
+      const j = await api(`/api/reviews/${id}/analyze`, { method: "POST" });
+      const i = REVIEWS.findIndex((r) => r.id === id);
+      if (i >= 0) REVIEWS[i] = j.review;
+      await loadReviews();
+      openReview(id);
+      toast("重新分析完成 ✅");
+    } catch (e) { toast("⚠️ " + e.message); }
+  });
+  $("#rvDelete").addEventListener("click", async () => {
+    if (!confirm("确定删除这条复盘？删除后无法恢复。")) return;
+    await api(`/api/reviews/${id}`, { method: "DELETE" });
+    box.style.display = "none";
+    await loadReviews();
+    toast("已删除");
+  });
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// 文件上传：读取文本填入纪要框
+$("#rvFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    $("#rvTranscript").value = reader.result;
+    $("#rvFileInfo").textContent = `✅ 已读取：${file.name}（${(file.size / 1024).toFixed(1)} KB）`;
+  };
+  reader.readAsText(file, "utf-8");
+});
+
+// 新建复盘
+$("#rvCreate").addEventListener("click", async () => {
+  const transcript = $("#rvTranscript").value.trim();
+  if (!transcript) { toast("请粘贴面试纪要内容，或上传 txt/md 文件"); return; }
+  const btn = $("#rvCreate");
+  btn.textContent = "🤖 AI 分析中…（约 20-40 秒）";
+  btn.disabled = true;
+  try {
+    const j = await api("/api/reviews", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company: $("#rvCompany").value.trim(),
+        role: $("#rvRole").value.trim(),
+        round: $("#rvRound").value,
+        date: $("#rvDate").value,
+        transcript,
+        source: "manual",
+      }),
+    });
+    $("#rvCompany").value = ""; $("#rvRole").value = "";
+    $("#rvTranscript").value = ""; $("#rvFileInfo").textContent = "";
+    $("#rvFile").value = "";
+    await loadReviews();
+    if (j.review) openReview(j.review.id);
+    toast(j.analyzeError ? "⚠️ 已保存，但 AI 分析失败：" + j.analyzeError : "复盘完成 ✅");
+  } catch (e) { toast("⚠️ " + e.message); }
+  btn.textContent = "🤖 AI 复盘分析";
+  btn.disabled = false;
+});
+
+// 同步腾讯会议纪要（当前为预留接口）
+$("#rvSyncBtn").addEventListener("click", async () => {
+  try {
+    const j = await api("/api/reviews/sync", { method: "POST" });
+    toast(j.fallback || j.message || "自动同步暂不可用");
+  } catch (e) { toast("⚠️ " + e.message); }
+});
+
+// 默认填入今天日期
+$("#rvDate").value = new Date().toISOString().slice(0, 10);
+
 load().catch((e) => toast("加载失败：" + e.message));
 loadAgent().catch((e) => toast("Agent 加载失败：" + e.message));
+loadReviews().catch((e) => toast("复盘加载失败：" + e.message));

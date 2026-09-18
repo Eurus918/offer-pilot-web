@@ -19,6 +19,7 @@
       <button class="tab active" data-tab="profile">个人档案</button>
       <button class="tab" data-tab="apps">投递进度</button>
       <button class="tab" data-tab="interview">面邀备战</button>
+      <button class="tab" data-tab="review">📝 面试复盘</button>
       <button class="tab" data-tab="works">我的作品</button>
       <button class="tab" data-tab="agent">🤖 Agent</button>
       <button class="tab" data-tab="settings">设置</button>
@@ -112,6 +113,53 @@
           <p class="hint">选择左侧一次面试查看建议，并在下方问答窗口继续追问。</p>
         </div>
       </div>
+    </section>
+
+    <!-- 面试复盘（面试后沉淀） -->
+    <section class="panel" id="review">
+      <div class="card">
+        <div class="row-between">
+          <h3>📊 复盘总览</h3>
+          <button class="btn" id="rvSyncBtn" title="从腾讯会议/元宝自动同步纪要">🔄 同步会议纪要</button>
+        </div>
+        <p class="hint">每场面试后沉淀一次。AI 会跨场次总结你的<b>稳定强项</b>与<b>反复出错点</b>，并自动迭代备战建议、简历与自我介绍。</p>
+        <div id="rvSummary" class="rv-summary"></div>
+      </div>
+
+      <div class="card">
+        <h3>➕ 新建面试复盘</h3>
+        <p class="hint">腾讯会议录制面试 → 元宝生成纪要 → 粘贴到下方（或上传 .txt/.md 文件），AI 自动做结构化复盘分析。</p>
+        <div class="form">
+          <div class="form-row">
+            <input id="rvCompany" placeholder="公司，如：字节跳动" />
+            <input id="rvRole" placeholder="岗位，如：AI 产品经理" />
+          </div>
+          <div class="form-row">
+            <select id="rvRound">
+              <option value="AI 面">AI 面</option>
+              <option value="一面">一面</option>
+              <option value="二面">二面</option>
+              <option value="三面">三面</option>
+              <option value="HR 面">HR 面</option>
+              <option value="其他">其他</option>
+            </select>
+            <input id="rvDate" type="date" />
+          </div>
+          <textarea id="rvTranscript" placeholder="粘贴元宝生成的面试纪要全文…" style="min-height:150px"></textarea>
+          <label class="filelabel">或上传纪要文件（.txt / .md）
+            <input id="rvFile" type="file" accept=".txt,.md,.markdown,text/plain" />
+          </label>
+          <div id="rvFileInfo" class="hint"></div>
+          <button class="btn primary" id="rvCreate">🤖 AI 复盘分析</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📚 复盘记录（<span id="rvCount">0</span>）</h3>
+        <div id="rvList" class="rv-list"></div>
+      </div>
+
+      <div class="card" id="rvDetail" style="display:none"></div>
     </section>
 
     <!-- 我的作品 -->
