@@ -5,6 +5,7 @@
  */
 import { reviewSys } from "../prompts.js";
 import { parseJsonLoose } from "../ai.js";
+import { normalizeFact, shortValue } from "../facts.js";
 
 /** 对一段纪要做 AI 复盘分析 */
 export async function analyzeReview(ctx, rv) {
@@ -60,43 +61,73 @@ export function buildReviewContext(store, company) {
   return ctx;
 }
 
-/** 把跨场复盘的强弱项沉淀到个人档案 */
+/**
+ * 把跨场复盘的强弱项沉淀到个人档案。
+ *
+ * 关键约束：个人档案里的词条一律 ≤10 字。早期版本把 3 条长结论用「；」拼成一整条，
+ * 在页面上变成两坨撑破布局的大色块——现在改成拆成多条短标签（强项①/②/③、短板①/②/③），
+ * 每条只放一个 4-7 字的短语。
+ */
+
+/** 旧版本沉淀用的整段式 key，读到就清掉，避免和新词条并存 */
+const LEGACY_KEYS = ["💪 面试稳定强项", "🎯 面试反复出错点"];
+const S_PREFIX = "强项";
+const W_PREFIX = "短板";
+const CIRCLED = ["①", "②", "③"];
+
+function isReviewFact(key) {
+  const k = String(key || "");
+  return LEGACY_KEYS.includes(k) || new RegExp(`^(${S_PREFIX}|${W_PREFIX})[①②③]$`).test(k);
+}
+
 export function syncStrengthsToProfile(store) {
   const analyzed = (Array.isArray(store.reviews) ? store.reviews : []).filter((r) => r && r.analysis);
-  const map = new Map((store.profile?.facts || []).map((f) => [f.key, f]));
+  const kept = (Array.isArray(store.profile?.facts) ? store.profile.facts : []).filter((f) => !isReviewFact(f.key));
   const today = new Date().toISOString().slice(0, 10);
 
   // 没有复盘记录时，清掉之前沉淀的（避免删光复盘后还留着旧结论）
   if (!analyzed.length) {
-    map.delete("💪 面试稳定强项");
-    map.delete("🎯 面试反复出错点");
-    store.profile.facts = [...map.values()];
+    store.profile.facts = kept;
     return;
   }
 
   const sCount = new Map();
   const wCount = new Map();
-  for (const r of analyzed) {
-    for (const s of r.analysis.strengths || []) sCount.set(s, (sCount.get(s) || 0) + 1);
-    for (const w of r.analysis.weaknesses || []) wCount.set(w, (wCount.get(w) || 0) + 1);
-  }
-  // 只在出现 2 次以上时才算"稳定/反复"，避免单场偶然
-  const top = (m, n) =>
-    [...m.entries()].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, n).map(([t]) => t);
+  const bump = (m, k) => {
+    const t = String(k ?? "").trim();
+    if (t) m.set(t, (m.get(t) || 0) + 1);
+  };
 
-  const topS = top(sCount, 3);
-  const topW = top(wCount, 3);
-  if (topS.length) {
-    map.set("💪 面试稳定强项", { key: "💪 面试稳定强项", value: topS.join("；"), source: "复盘沉淀", updatedAt: today });
-  } else {
-    map.delete("💪 面试稳定强项");
+  for (const r of analyzed) {
+    const a = r.analysis || {};
+    // 优先用复盘时提炼好的短标签；老复盘没有这个字段，就用压缩后的原句兜底
+    const st = (a.strengthTags || []).length ? a.strengthTags : (a.strengths || []).map((x) => shortValue(x));
+    const wt = (a.weaknessTags || []).length ? a.weaknessTags : (a.weaknesses || []).map((x) => shortValue(x));
+    for (const t of st) bump(sCount, t);
+    for (const t of wt) bump(wCount, t);
   }
-  if (topW.length) {
-    map.set("🎯 面试反复出错点", { key: "🎯 面试反复出错点", value: topW.join("；"), source: "复盘沉淀", updatedAt: today });
-  } else {
-    map.delete("🎯 面试反复出错点");
-  }
-  store.profile.facts = [...map.values()];
+
+  /**
+   * 出现 2 次以上才算"稳定/反复"，最多沉淀 3 条。
+   * 一条都没到 2 次时，退一步保留最高频的那条——否则复盘场次少的使用者会看到这一栏凭空消失。
+   */
+  const pick = (m) => {
+    const sorted = [...m.entries()].sort((a, b) => b[1] - a[1]);
+    const stable = sorted.filter(([, c]) => c >= 2).slice(0, 3).map(([t]) => t);
+    if (stable.length) return stable;
+    return sorted.length ? [sorted[0][0]] : [];
+  };
+
+  const add = (prefix, tags) => {
+    tags.forEach((t, i) => {
+      const n = normalizeFact({ key: prefix + CIRCLED[i], value: t, source: "复盘沉淀", updatedAt: today });
+      if (n?.key) kept.push(n);
+    });
+  };
+
+  add(S_PREFIX, pick(sCount));
+  add(W_PREFIX, pick(wCount));
+  store.profile.facts = kept;
 }
 
 /** 跨复盘汇总统计 */

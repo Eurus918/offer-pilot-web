@@ -4,6 +4,7 @@
  */
 import fs from "fs";
 import { DATA_DIR, DATA_FILE, EXAMPLE_FILE, DEFAULT_MODEL } from "./config.js";
+import { normalizeFacts } from "./facts.js";
 
 /** 空档案的骨架——保证任何字段缺失都不会让页面崩掉 */
 function emptyStore() {
@@ -33,7 +34,8 @@ function normalize(s) {
   out.config.meeting = { ...(s?.config?.meeting || {}) };
   out.profile = {
     basics: { ...(s?.profile?.basics || {}) },
-    facts: arr(s?.profile?.facts),
+    // 老数据/手工编辑过的长词条在这里统一压到 10 字以内（原文保留在 detail）
+    facts: normalizeFacts(arr(s?.profile?.facts)),
     chatHistory: arr(s?.profile?.chatHistory),
   };
   out.applications = arr(s?.applications);

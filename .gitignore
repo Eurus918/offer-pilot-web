@@ -8,6 +8,7 @@ node_modules/
 # 真实数据（含个人投递记录、简历信息，绝不提交）
 # 模板与演示数据是要提交的，只排除使用者自己的那份
 data/store.json
+data/store.json.*
 data/store.json.tmp
 data/store.json.corrupt-*
 

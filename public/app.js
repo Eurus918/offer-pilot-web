@@ -104,8 +104,15 @@ function renderProfile() {
   renderChat();
 }
 function renderFacts() {
-  $("#facts").innerHTML = STATE.profile.facts
-    .map((f) => `<div class="fact">${f.key}：${f.value}<small>来源：${f.source} · ${f.updatedAt}</small></div>`)
+  // 词条一律短标签（后端已把每条压到 10 字以内）；被压缩掉的原文放在 title 里悬停可看
+  const attr = (s) => esc(String(s ?? "")).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  $("#facts").innerHTML = (STATE.profile.facts || [])
+    .map((f) => {
+      const line = `${f.key}：${f.value}`;
+      return `<div class="fact${f.detail ? " has-detail" : ""}" title="${attr(f.detail || line)}">` +
+        `<span class="fact-main">${esc(line)}</span>` +
+        `<small>来源：${esc(f.source || "—")} · ${esc(f.updatedAt || "—")}</small></div>`;
+    })
     .join("") || "<span class='hint'>还没有沉淀的偏好，去右边聊聊吧。</span>";
 }
 function renderChat() {

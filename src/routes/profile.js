@@ -5,6 +5,7 @@ import { Router } from "express";
 import { asyncHandler, badRequest } from "../errors.js";
 import { chatSys, extractFactsSys } from "../prompts.js";
 import { parseJsonLoose } from "../ai.js";
+import { normalizeFact } from "../facts.js";
 
 /** 上传文件 → 转成给模型的文本补充 + 图片数组 */
 function buildUserContent(message, file) {
@@ -82,8 +83,10 @@ export function registerProfile(router, ctx) {
 
       const map = new Map(ctx.store.profile.facts.map((f) => [f.key, f]));
       for (const f of out?.facts || []) {
-        if (!f?.key || !f?.value) continue;
-        map.set(f.key, { key: String(f.key), value: String(f.value), source: "对话沉淀", updatedAt: today });
+        // 词条一律经归一化压到 10 字以内，AI 偶尔不守规矩也兜得住
+        const n = normalizeFact({ ...f, source: "对话沉淀", updatedAt: today });
+        if (!n?.key) continue;
+        map.set(n.key, n);
       }
       ctx.store.profile.facts = [...map.values()];
       ctx.save();
@@ -98,9 +101,10 @@ export function registerProfile(router, ctx) {
       const { key, value } = req.body || {};
       if (!key || !value) throw badRequest("请填写维度和内容");
       const today = new Date().toISOString().slice(0, 10);
-      const k = String(key).trim();
+      const n = normalizeFact({ key, value, source: "手动记录", updatedAt: today });
+      if (!n?.key || !n?.value) throw badRequest("维度和内容不能为空");
       const map = new Map(ctx.store.profile.facts.map((f) => [f.key, f]));
-      map.set(k, { key: k, value: String(value).trim(), source: "手动记录", updatedAt: today });
+      map.set(n.key, n);
       ctx.store.profile.facts = [...map.values()];
       ctx.save();
       res.json({ facts: ctx.store.profile.facts });

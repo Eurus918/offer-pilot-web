@@ -113,9 +113,12 @@ h3 { font-size: 14px; margin-bottom: 10px; font-weight: 650; letter-spacing: -.0
 .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .fact {
   background: var(--primary-soft); color: var(--primary); border-radius: 10px;
-  padding: 6px 11px; font-size: 13px; font-weight: 600;
+  padding: 6px 11px; font-size: 13px; font-weight: 600; max-width: 100%;
 }
 .fact small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+/* 词条被压缩过（原文更长）时给个弱提示：悬停可看完整表述 */
+.fact.has-detail { cursor: help; }
+.fact.has-detail .fact-main { text-decoration: underline dotted; text-underline-offset: 3px; }
 
 /* ===== 聊天区（现代气泡风格） ===== */
 .chat-card { display: flex; flex-direction: column; height: 0; min-height: 100%; }
