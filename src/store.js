@@ -3,7 +3,7 @@
  * 数据只存在使用者本机，不上传任何地方。
  */
 import fs from "fs";
-import { DATA_DIR, DATA_FILE, EXAMPLE_FILE, DEFAULT_MODEL } from "./config.js";
+import { DATA_DIR, DATA_FILE, EXAMPLE_FILE, DEFAULT_MODEL, DEMO_MODE, DEMO_SOURCE } from "./config.js";
 import { normalizeFacts } from "./facts.js";
 
 /** 空档案的骨架——保证任何字段缺失都不会让页面崩掉 */
@@ -13,6 +13,7 @@ function emptyStore() {
     profile: { basics: {}, facts: [], chatHistory: [] },
     applications: [],
     interviews: [],
+    todos: [],
     works: [],
     reviews: [],
     offers: [],
@@ -23,6 +24,28 @@ function emptyStore() {
 }
 
 const arr = (v) => (Array.isArray(v) ? v : []);
+
+/** 单条待办的归一化：补齐缺字段、过滤非法优先级、子步骤标准化 */
+function normTodo(t) {
+  if (!t || typeof t !== "object") return null;
+  const steps = Array.isArray(t.steps)
+    ? t.steps
+        .map((s) => ({ text: String((s && s.text) || s || "").trim(), done: !!(s && s.done) }))
+        .filter((s) => s.text)
+    : [];
+  return {
+    id: t.id || "td-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+    title: String(t.title || "").trim(),
+    category: t.category || "其他",
+    priority: ["high", "medium", "low"].includes(t.priority) ? t.priority : "medium",
+    due: t.due || "",
+    note: t.note || "",
+    steps,
+    done: !!t.done,
+    doneAt: t.doneAt || (t.done ? new Date().toISOString().slice(0, 10) : ""),
+    createdAt: t.createdAt || new Date().toISOString().slice(0, 10),
+  };
+}
 
 /**
  * 归一化：补齐后加的字段（老数据 / 手工编辑过的 store.json 都能安全加载）
@@ -40,6 +63,7 @@ function normalize(s) {
   };
   out.applications = arr(s?.applications);
   out.interviews = arr(s?.interviews);
+  out.todos = arr(s?.todos).map(normTodo).filter((t) => t.title);
   out.works = arr(s?.works);
   out.reviews = arr(s?.reviews);
   out.offers = arr(s?.offers);
@@ -55,6 +79,12 @@ function ensureDir() {
 function ensureStore() {
   ensureDir();
   if (fs.existsSync(DATA_FILE)) return;
+  // 演示模式：从仓库自带的演示数据复制一份作为运行时数据（真实 store.json 完全不参与）
+  if (DEMO_MODE && fs.existsSync(DEMO_SOURCE)) {
+    fs.copyFileSync(DEMO_SOURCE, DATA_FILE);
+    console.log("[store] 演示模式：已从 data/store.demo.json 生成运行时演示数据");
+    return;
+  }
   if (fs.existsSync(EXAMPLE_FILE)) {
     fs.copyFileSync(EXAMPLE_FILE, DATA_FILE);
     console.log("[store] 已从 data/store.example.json 生成你的 data/store.json");
@@ -114,6 +144,7 @@ export function onboardingState(s) {
     counts: {
       applications: arr(s?.applications).length,
       interviews: arr(s?.interviews).length,
+      todos: arr(s?.todos).length,
       reviews: arr(s?.reviews).length,
       offers: arr(s?.offers).length,
       works: arr(s?.works).length,

@@ -11,7 +11,7 @@
  *   src/routes/      HTTP 接口
  */
 import express from "express";
-import { loadEnv, PORT, PUBLIC_DIR } from "./src/config.js";
+import { loadEnv, PORT, PUBLIC_DIR, DEMO_MODE } from "./src/config.js";
 import { createContext } from "./src/context.js";
 import { createRouter } from "./src/routes/index.js";
 import { friendly, AppError } from "./src/errors.js";
@@ -50,7 +50,10 @@ app.listen(PORT, () => {
   console.log("  Offer Pilot 已启动");
   console.log(`  → http://localhost:${PORT}`);
   console.log(`  → AI：${ctx.hasKey() ? "已配置 Key（" + ctx.getModel() + "）" : "未配置 Key，AI 功能不可用（可在设置页填写）"}`);
-  console.log(`  → 数据：${kbOk}，存于本机 data/store.json`);
+  const dataHint = DEMO_MODE
+    ? "演示模式：跑的是示例数据，访客填写的 Key 不保存"
+    : `${kbOk}，存于本机 data/store.json`;
+  console.log(`  → 数据：${dataHint}`);
   console.log("");
 });
 

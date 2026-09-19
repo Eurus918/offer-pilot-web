@@ -6,6 +6,7 @@ import { registerCore } from "./core.js";
 import { registerProfile } from "./profile.js";
 import { registerApplications } from "./applications.js";
 import { registerInterviews } from "./interviews.js";
+import { registerTodos } from "./todos.js";
 import { registerReviews } from "./reviews.js";
 import { registerResume } from "./resume.js";
 import { registerOffers } from "./offers.js";
@@ -13,6 +14,7 @@ import { registerAgent } from "./agent.js";
 import { registerMeeting } from "./meeting.js";
 import { registerTheme } from "./theme.js";
 import { registerInsights } from "./insights.js";
+import { registerExport } from "./export.js";
 
 export function createRouter(ctx) {
   const router = Router();
@@ -20,6 +22,7 @@ export function createRouter(ctx) {
   registerProfile(router, ctx);
   registerApplications(router, ctx);
   registerInterviews(router, ctx);
+  registerTodos(router, ctx);
   registerReviews(router, ctx);
   registerResume(router, ctx);
   registerOffers(router, ctx);
@@ -27,5 +30,6 @@ export function createRouter(ctx) {
   registerMeeting(router, ctx);
   registerTheme(router, ctx);
   registerInsights(router, ctx);
+  registerExport(router, ctx);
   return router;
 }

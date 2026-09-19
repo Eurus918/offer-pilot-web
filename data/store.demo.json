@@ -361,6 +361,72 @@
       "link": "https://github.com/"
     }
   ],
+  "todos": [
+    {
+      "id": "demo-td-1",
+      "title": "完成论文开题报告初稿",
+      "category": "论文",
+      "priority": "high",
+      "due": "2026-09-28",
+      "note": "重点写 DiD 方法部分，先列三级提纲再铺内容",
+      "steps": [
+        { "text": "整理 15 篇核心文献并标注方法", "done": true },
+        { "text": "写出三级提纲（引言/方法/预期）", "done": false },
+        { "text": "完成方法章节初稿", "done": false }
+      ],
+      "done": false,
+      "doneAt": "",
+      "createdAt": "2026-09-15"
+    },
+    {
+      "id": "demo-td-2",
+      "title": "牛客网刷 3 道 SQL 真题",
+      "category": "刷题",
+      "priority": "medium",
+      "due": "2026-09-21",
+      "note": "窗口函数 + 连续登录类题型",
+      "steps": [],
+      "done": false,
+      "doneAt": "",
+      "createdAt": "2026-09-16"
+    },
+    {
+      "id": "demo-td-3",
+      "title": "字节一面准备：复盘项目指标口径",
+      "category": "面试",
+      "priority": "high",
+      "due": "2026-09-20",
+      "note": "被追问'这个数字怎么算出来的'要答得上来",
+      "steps": [],
+      "done": false,
+      "doneAt": "",
+      "createdAt": "2026-09-17"
+    },
+    {
+      "id": "demo-td-4",
+      "title": "投递进度表更新 + 催问 2 家笔试链接",
+      "category": "投递",
+      "priority": "low",
+      "due": "",
+      "note": "超 5 工作日的笔试链接可礼貌催问",
+      "steps": [],
+      "done": false,
+      "doneAt": "",
+      "createdAt": "2026-09-18"
+    },
+    {
+      "id": "demo-td-5",
+      "title": "简历项目一加一行指标定义",
+      "category": "简历",
+      "priority": "medium",
+      "due": "",
+      "note": "不要只写'增长'，补口径",
+      "steps": [],
+      "done": true,
+      "doneAt": "2026-09-14",
+      "createdAt": "2026-09-12"
+    }
+  ],
   "resume": null,
   "offerCompare": null,
   "onboarding": {

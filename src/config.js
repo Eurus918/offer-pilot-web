@@ -11,9 +11,21 @@ export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const PORT = Number(process.env.PORT) || 3000;
 export const DATA_DIR = join(ROOT, "data");
-export const DATA_FILE = join(DATA_DIR, "store.json");
 export const EXAMPLE_FILE = join(DATA_DIR, "store.example.json");
 export const PUBLIC_DIR = join(ROOT, "public");
+
+/**
+ * 演示模式：给公网部署用（Render 等）。
+ * 开启后数据文件换成 demo.runtime.json，首次启动从 store.demo.json 复制一份，
+ * 因此云端跑的一直是示例数据，你的真实 store.json 永远不会被打包进镜像或读走。
+ * 另外演示模式下不会把访客填写的 API Key 落盘（见 routes/core.js）。
+ */
+export const DEMO_MODE = ["1", "true", "yes"].includes(
+  String(process.env.OFFER_PILOT_DEMO || "").toLowerCase()
+);
+export const DEMO_SOURCE = join(DATA_DIR, "store.demo.json");
+export const DEMO_FILE = join(DATA_DIR, "demo.runtime.json");
+export const DATA_FILE = DEMO_MODE ? DEMO_FILE : join(DATA_DIR, "store.json");
 
 // Agent 知识库：仓库内自带模板目录，使用者直接改这里的文件即可
 export const AGENT_KB_DIR = process.env.OFFER_PILOT_KB_DIR || join(ROOT, "agent-kb");

@@ -168,10 +168,35 @@ offer-pilot-web/
 个人版账号用不了——这是平台限制。没配凭证时不影响手动粘贴纪要。见 [`docs/tencent-meeting-api.md`](docs/tencent-meeting-api.md)。
 
 **能部署到公网吗？**
-可以，`render.yaml` 已就位。但建议只在公网部署一份**不含真实数据**的实例——本工具的设计前提就是数据在你本机。
+可以，见下方「部署到公网（给朋友一个链接）」。但请只部署**不含真实数据**的实例——本工具的设计前提就是数据在你本机。
 
 **数据结构变了怎么办？**
 启动时会自动做 schema 归一化，老数据能安全加载。`store.json` 若解析失败会自动备份而不是崩溃。
+
+---
+
+## 部署到公网（给朋友一个链接）
+
+想让别人不用装 Node 就能点开体验，用 Render 免费档即可，`render.yaml` 已就位。
+
+**三步：**
+1. 在 [Render](https://render.com) 用 GitHub 登录，点 **New → Blueprint**，选中本仓库（会自动读 `render.yaml`）。
+2. 环境变量 `OFFER_PILOT_DEMO` 已默认设为 `true`；`DEEPSEEK_API_KEY` 在控制台里手动填（**不填也能部署**）。
+3. 点 Apply，等几分钟拿到 `https://xxx.onrender.com` 就完事。
+
+**演示模式（`OFFER_PILOT_DEMO=true`）做了什么**，这是公网部署的安全前提：
+
+| 行为 | 说明 |
+|---|---|
+| 数据文件 | 换成 `data/demo.runtime.json`，首次启动从仓库自带的 `store.demo.json` 复制 |
+| 你的真实数据 | `data/store.json` 被 `.gitignore` 排除，永远不会被打包进镜像，也不参与读取 |
+| 访客填的 API Key | **不落盘、不生效**。避免你的 Key 被写进共享演示数据、或被其他访客看到 |
+| 页面提示 | 顶部有「在线演示版」横幅，设置页也会说明 Key 不会被保存 |
+| 数据重置 | Render 免费档重启/重新部署会回到干净的示例数据 |
+
+**关于 AI 功能**：不填 `DEEPSEEK_API_KEY` 时，工作台、求职洞察、投递、待办、Offer 对比、导出 Word/Excel 全部照常可用，只是没有 AI；填了才对所有人开放 AI，调用量记在你的账号上，请留意额度。
+
+> 免费档会在闲置后休眠，首次打开可能要等 30–60 秒唤醒，属正常现象。
 
 ---
 
@@ -185,6 +210,7 @@ offer-pilot-web/
 | `AI_TIMEOUT_MS` | AI 请求超时 | `120000` |
 | `OFFER_PILOT_SKILL_FILE` | 自定义 Agent 技能手册路径 | 仓库内置那份 |
 | `OFFER_PILOT_KB_DIR` | 自定义知识库目录 | `agent-kb/` |
+| `OFFER_PILOT_DEMO` | 演示模式：跑示例数据、不保存访客 Key（公网部署请开） | 关闭 |
 
 ---
 

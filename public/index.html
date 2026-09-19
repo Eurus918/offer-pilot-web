@@ -66,50 +66,283 @@
     </div>
   </div>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">OP</span>
-      <div>
-        <div class="title">Offer Pilot</div>
-        <div class="sub">秋招 AI 产品岗 · 个人投递助手</div>
-      </div>
-    </div>
-    <nav class="tabs">
-      <button class="tab active" data-tab="profile">个人档案</button>
-      <button class="tab" data-tab="apps">投递进度</button>
-      <button class="tab" data-tab="insights">求职洞察</button>
-      <button class="tab" data-tab="interview">面邀备战</button>
-      <button class="tab" data-tab="review">面试复盘</button>
-      <button class="tab" data-tab="resume">简历生成</button>
-      <button class="tab" data-tab="offers">Offer 对比</button>
-      <button class="tab" data-tab="works">我的作品</button>
-      <button class="tab" data-tab="agent">Agent</button>
-      <button class="tab" data-tab="settings">设置</button>
-    </nav>
-    <div id="keyBadge" class="key-badge">API Key：未设置</div>
-  </header>
-
-  <main>
-    <div id="aiNotice" class="ai-notice" style="display:none"></div>
-    <!-- 个人档案 -->
-    <section class="panel active" id="profile">
-      <div class="grid-2">
-        <div class="card">
-          <h3>基本信息（来自简历）</h3>
-          <div id="basics" class="kv"></div>
-          <h3 style="margin-top:18px">沉淀中的个人偏好</h3>
-          <p class="hint">在右侧聊天里随便聊你的想法（想去的城市、偏好的业务、顾虑…），系统会自动总结沉淀到这里；也可直接手动添加一条。<br />每条词条自动压缩到 <b>10 字以内</b>，保证一眼扫得完；完整的原始表述悬停即可查看。</p>
-          <div id="facts" class="facts"></div>
-          <div class="fact-add">
-            <input id="factKey" placeholder="维度，≤4 字" />
-            <input id="factValue" placeholder="内容，≤8 字" />
-            <button class="btn" id="factAddBtn">手动添加</button>
-          </div>
+  <div class="app-shell">
+    <!-- 侧边栏导航 -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo">OP</span>
+        <div>
+          <div class="title">Offer Pilot</div>
+          <div class="sub">秋招 AI 产品岗助手</div>
         </div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-label">概览</div>
+          <button class="nav-item active" data-view="dashboard"><span>工作台</span></button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-label">求职</div>
+          <button class="nav-item" data-view="apps"><span>投递</span><span class="nav-badge" id="navAppsCount" style="display:none"></span></button>
+          <button class="nav-item" data-view="interview"><span>面试</span><span class="nav-badge" id="navIvCount" style="display:none"></span></button>
+          <button class="nav-item" data-view="todos"><span>待办</span><span class="nav-badge hot" id="navTodoCount" style="display:none"></span></button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-label">我的</div>
+          <button class="nav-item" data-view="profile"><span>档案与简历</span></button>
+          <button class="nav-item" data-view="offers"><span>Offer 对比</span></button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-label">工具</div>
+          <button class="nav-item" data-view="agent"><span>Agent</span></button>
+        </div>
+      </nav>
+
+      <div class="nav-foot">
+        <button class="nav-item" data-view="settings"><span>设置</span></button>
+        <div id="keyBadge" class="key-badge">API Key：未设置</div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <main>
+        <div id="demoNotice" class="demo-notice" style="display:none"></div>
+        <div id="aiNotice" class="ai-notice" style="display:none"></div>
+
+        <!-- ============ 工作台（融合：指标 + 待办 + 面试 + 洞察分析） ============ -->
+        <section class="panel active" id="dashboard">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">工作台</h1>
+              <p class="page-sub">一眼看完进度、今天要做的事，以及瓶颈在哪</p>
+            </div>
+          </div>
+          <div id="dashStats" class="dash-stats"></div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>今天要做的事</h3>
+              <div id="dashTodos" class="td-list"></div>
+            </div>
+            <div class="card">
+              <h3>接下来的面试</h3>
+              <div id="dashInterviews" class="iv-list"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row-between">
+              <h3>该跟进的投递</h3>
+              <button class="btn" id="insightRefresh">刷新数据</button>
+            </div>
+            <p class="hint">超过 7 天没有进展、且还没被拒的，值得主动问一句。</p>
+            <div id="insightStale"></div>
+          </div>
+
+          <div class="card">
+            <h3>我的求职漏斗</h3>
+            <p class="hint">纯数据统计，不调用 AI。看清楚瓶颈在哪个环节——是投得不够多，还是简历过不了筛。</p>
+            <div id="insightSummary" class="insight-stats"></div>
+            <div id="insightFunnel" class="insight-funnel"></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>环节转化率</h3>
+              <div id="insightConv" class="table"></div>
+            </div>
+            <div class="card">
+              <h3>渠道效果</h3>
+              <p class="hint">记录投递渠道，才能看出哪条路真的有用。</p>
+              <div id="insightChannels" class="table"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row-between">
+              <h3>面试表现趋势</h3>
+              <button class="btn" id="insightExportBtn">导出 Excel</button>
+            </div>
+            <p class="hint">来自「面试」页复盘的评分，看自己是不是真的在进步。</p>
+            <div id="insightTrend"></div>
+          </div>
+        </section>
+
+        <!-- ============ 投递（含 JD 匹配度） ============ -->
+        <section class="panel" id="apps">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">投递</h1>
+              <p class="page-sub">管进度、看漏斗，投之前先用 AI 判断这个岗值不值得投</p>
+            </div>
+            <button class="btn" id="appExportBtn">导出 Excel</button>
+          </div>
+
+          <div class="card">
+            <div class="row-between">
+              <h3>投递漏斗</h3>
+              <button class="btn" id="addAppBtn">+ 新增投递</button>
+            </div>
+            <div id="funnel" class="funnel"></div>
+          </div>
+          <div class="card">
+            <h3>投递清单（<span id="appCount">0</span> 个）</h3>
+            <div id="appTable" class="table"></div>
+          </div>
+
+          <div class="card">
+            <h3>JD 匹配度：这个岗值不值得投</h3>
+            <p class="hint">粘贴 JD（或上传截图），AI 对照你的真实经历打分，告诉你对上了什么、缺什么、投之前该补什么。<b>它只依据你写进「我的经历库」的内容判断，不会替你编经历。</b></p>
+            <div class="fact-add" style="margin-top:10px">
+              <input id="jdCompany" placeholder="公司（选填）" />
+              <input id="jdRole" placeholder="岗位（选填）" />
+            </div>
+            <textarea id="jdText" rows="4" placeholder="把 JD 整段粘贴到这里…" style="width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical"></textarea>
+            <div class="row-between" style="margin-top:8px">
+              <span id="jdImageTip" class="hint">也可以上传 JD 截图代替粘贴（选填）</span>
+              <button class="btn primary" id="jdMatchBtn">分析匹配度</button>
+            </div>
+            <div id="jdMatchResult" style="display:none;margin-top:14px"></div>
+          </div>
+        </section>
+
+        <!-- ============ 面试（备战 + 复盘 合并） ============ -->
+        <section class="panel" id="interview">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">面试</h1>
+              <p class="page-sub">面前往下拆备战，面后往回沉淀复盘，两件事连在一起</p>
+            </div>
+          </div>
+
+          <div class="sub-nav">
+            <button class="chip active" data-sub="prep">面邀备战</button>
+            <button class="chip" data-sub="review">面试复盘</button>
+          </div>
+
+          <div class="sub-panel active" data-sub="prep">
+            <div class="grid-2">
+              <div class="card">
+                <h3>新建面试备战</h3>
+                <p class="hint">收到面邀后，在这里上传 JD（文字或截图），自动生成自我介绍、可能问的问题与建议回答、知识储备清单。</p>
+                <div class="form">
+                  <input id="ivCompany" placeholder="公司" />
+                  <input id="ivRole" placeholder="岗位" />
+                  <div class="form-row">
+                    <select id="ivType">
+                      <option value="upcoming">即将面试</option>
+                      <option value="historical">历史记录（已结束）</option>
+                    </select>
+                    <input id="ivDdl" type="datetime-local" placeholder="截止时间（DDL）" />
+                  </div>
+                  <textarea id="ivText" placeholder="粘贴 JD 文字（可留空，仅传图）"></textarea>
+                  <label class="filelabel">上传 JD 截图
+                    <input id="ivImage" type="file" accept="image/*" />
+                  </label>
+                  <div id="ivPreview" class="img-preview"></div>
+                  <button class="btn primary" id="ivCreate">生成备战建议</button>
+                </div>
+
+                <h3 style="margin-top:18px">即将面试 <span id="upcomingCount" class="count-badge">0</span></h3>
+                <div id="ivUpcoming" class="iv-list"></div>
+
+                <h3 style="margin-top:18px">历史面试 <span id="histCount" class="count-badge">0</span></h3>
+                <div id="ivHistorical" class="iv-list iv-list-hist"></div>
+              </div>
+              <div class="card" id="ivDetail">
+                <p class="hint">选择左侧一次面试查看建议，并在下方问答窗口继续追问。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-panel" data-sub="review">
+            <div class="card">
+              <div class="row-between">
+                <h3>复盘总览</h3>
+                <button class="btn" id="rvSyncBtn" title="从腾讯会议/元宝自动同步纪要">同步会议纪要</button>
+              </div>
+              <p class="hint">每场面试后沉淀一次。AI 会跨场次总结你的<b>稳定强项</b>与<b>反复出错点</b>，并自动迭代备战建议、简历与自我介绍。</p>
+              <div id="rvSummary" class="rv-summary"></div>
+            </div>
+
+            <div class="card">
+              <h3>新建面试复盘</h3>
+              <p class="hint">腾讯会议录制面试 元宝生成纪要 粘贴到下方（或上传 .txt/.md 文件），AI 自动做结构化复盘分析。</p>
+              <div class="form">
+                <div class="form-row">
+                  <input id="rvCompany" placeholder="公司，如：字节跳动" />
+                  <input id="rvRole" placeholder="岗位，如：AI 产品经理" />
+                </div>
+                <div class="form-row">
+                  <select id="rvRound">
+                    <option value="AI 面">AI 面</option>
+                    <option value="一面">一面</option>
+                    <option value="二面">二面</option>
+                    <option value="三面">三面</option>
+                    <option value="HR 面">HR 面</option>
+                    <option value="其他">其他</option>
+                  </select>
+                  <input id="rvDate" type="date" />
+                </div>
+                <textarea id="rvTranscript" placeholder="粘贴元宝生成的面试纪要全文…" style="min-height:150px"></textarea>
+                <label class="filelabel">或上传纪要文件（.txt / .md）
+                  <input id="rvFile" type="file" accept=".txt,.md,.markdown,text/plain" />
+                </label>
+                <div id="rvFileInfo" class="hint"></div>
+                <button class="btn primary" id="rvCreate">AI 复盘分析</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>复盘记录（<span id="rvCount">0</span>）</h3>
+              <div id="rvList" class="rv-list"></div>
+            </div>
+
+            <div class="card" id="rvDetail" style="display:none"></div>
+          </div>
+        </section>
+
+        <!-- ============ 档案与简历（档案 + 聊天 + 简历 + 作品集 合并） ============ -->
+        <section class="panel" id="profile">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">档案与简历</h1>
+              <p class="page-sub">上面是你的画像与作品，中间跟 AI 聊，往下直接生成可投递的简历</p>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <h3>基本信息（来自简历）</h3>
+              <div id="basics" class="kv"></div>
+            </div>
+            <div class="card">
+              <h3>我的 vibecoding AI 作品集</h3>
+              <p class="hint">这里汇总你用 vibe coding 做出的所有 AI 作品，可直接写进简历 / 面试展示。</p>
+              <div id="worksGrid" class="works-grid"></div>
+            </div>
+          </div>
+
         <div class="card chat-card">
-          <h3>和我聊聊（对话即沉淀档案）</h3>
-          <p class="hint">上传 JD 截图、简历、笔试题等资料，AI 会结合你的档案进行分析。对话内容会自动沉淀为个人偏好。</p>
-          <div id="chatLog" class="chat-log"></div>
+          <div class="row-between">
+            <h3>和我聊聊</h3>
+            <div class="export-row">
+              <button class="btn" id="chatToggle">查看完整对话</button>
+              <button class="btn" id="chatExportBtn">导出 Word</button>
+            </div>
+          </div>
+          <p class="hint">上传 JD 截图、简历、笔试题等资料，AI 会结合你的档案进行分析；聊天里提到的偏好会被静默记入档案，让后续建议更懂你。右侧只留本轮结论。</p>
+          <div class="ai-split">
+            <div id="chatLog" class="chat-log ai-main"></div>
+            <div id="chatPoints" class="ai-points">
+              <div class="ai-points-title">要点</div>
+              <div class="ai-points-empty">聊完之后，这里只留结论</div>
+            </div>
+          </div>
           <div class="chat-input-area">
             <div id="chatUploadPreview" class="chat-upload-preview"></div>
             <div class="chat-input">
@@ -120,303 +353,191 @@
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- 投递进度 -->
-    <section class="panel" id="apps">
-      <div class="card">
-        <div class="row-between">
-          <h3>投递漏斗</h3>
-          <button class="btn" id="addAppBtn">+ 新增投递</button>
-        </div>
-        <div id="funnel" class="funnel"></div>
-      </div>
-      <div class="card">
-        <h3>投递清单（<span id="appCount">0</span> 个）</h3>
-        <div id="appTable" class="table"></div>
-      </div>
-    </section>
-
-    <!-- 求职洞察 -->
-    <section class="panel" id="insights">
-      <div class="card">
-        <div class="row-between">
-          <h3>JD 匹配度：这个岗值不值得投</h3>
-        </div>
-        <p class="hint">粘贴 JD（或上传截图），AI 对照你的真实经历打分，告诉你对上了什么、缺什么、投之前该补什么。<b>它只依据你写进「我的经历库」的内容判断，不会替你编经历。</b></p>
-        <div class="fact-add" style="margin-top:10px">
-          <input id="jdCompany" placeholder="公司（选填）" />
-          <input id="jdRole" placeholder="岗位（选填）" />
-        </div>
-        <textarea id="jdText" rows="4" placeholder="把 JD 整段粘贴到这里…" style="width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical"></textarea>
-        <div class="row-between" style="margin-top:8px">
-          <span id="jdImageTip" class="hint">也可以上传 JD 截图代替粘贴（选填）</span>
-          <button class="btn primary" id="jdMatchBtn">分析匹配度</button>
-        </div>
-        <div id="jdMatchResult" style="display:none;margin-top:14px"></div>
-      </div>
-
-      <div class="card">
-        <div class="row-between">
-          <h3>我的求职漏斗</h3>
-          <button class="btn" id="insightRefresh">刷新</button>
-        </div>
-        <p class="hint">纯数据统计，不调用 AI。看清楚瓶颈在哪个环节——是投得不够多，还是简历过不了筛。</p>
-        <div id="insightSummary" class="insight-stats"></div>
-        <div id="insightFunnel" class="insight-funnel"></div>
-      </div>
-
-      <div class="grid-2">
-        <div class="card">
-          <h3>环节转化率</h3>
-          <div id="insightConv" class="table"></div>
-        </div>
-        <div class="card">
-          <h3>该跟进的投递</h3>
-          <p class="hint">超过 7 天没有进展、且还没被拒的，值得主动问一句。</p>
-          <div id="insightStale"></div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="card">
-          <h3>渠道效果</h3>
-          <p class="hint">记录投递渠道，才能看出哪条路真的有用。</p>
-          <div id="insightChannels" class="table"></div>
-        </div>
-        <div class="card">
-          <h3>面试表现趋势</h3>
-          <p class="hint">来自「面试复盘」的评分，看自己是不是真的在进步。</p>
-          <div id="insightTrend"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 面邀备战 -->
-    <section class="panel" id="interview">
-      <div class="grid-2">
-        <div class="card">
-          <h3>新建面试备战</h3>
-          <p class="hint">收到面邀后，在这里上传 JD（文字或截图），自动生成自我介绍、可能问的问题与建议回答、知识储备清单。</p>
-          <div class="form">
-            <input id="ivCompany" placeholder="公司" />
-            <input id="ivRole" placeholder="岗位" />
-            <div class="form-row">
-              <select id="ivType">
-                <option value="upcoming">即将面试</option>
-                <option value="historical">历史记录（已结束）</option>
-              </select>
-              <input id="ivDdl" type="datetime-local" placeholder="截止时间（DDL）" />
+          <div class="card">
+            <h3>AI 生成简历</h3>
+            <p class="hint">基于你的档案 + 目标岗位生成针对性简历。<b>信息不确定时 AI 会先向你提问</b>，确认后再生成，绝不编造。生成后可直接导出 Word / Excel。</p>
+            <div class="form">
+              <input id="rsTarget" placeholder="目标岗位，如：AI 产品经理（大模型方向）" />
+              <button class="btn primary" id="rsStart">开始生成</button>
             </div>
-            <textarea id="ivText" placeholder="粘贴 JD 文字（可留空，仅传图）"></textarea>
-            <label class="filelabel">上传 JD 截图
-              <input id="ivImage" type="file" accept="image/*" />
-            </label>
-            <div id="ivPreview" class="img-preview"></div>
-            <button class="btn primary" id="ivCreate">生成备战建议</button>
+            <div id="rsQuestions" style="display:none"></div>
+            <div id="rsResult"></div>
+          </div>
+        </section>
+
+        <!-- ============ 待办清单 ============ -->
+        <section class="panel" id="todos">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">待办清单</h1>
+              <p class="page-sub">记录一切要跟进的事，设个日期就会提醒你</p>
+            </div>
           </div>
 
-          <!-- 即将面试 -->
-          <h3 style="margin-top:18px">即将面试 <span id="upcomingCount" class="count-badge">0</span></h3>
-          <div id="ivUpcoming" class="iv-list"></div>
-
-          <!-- 历史面试 -->
-          <h3 style="margin-top:18px">历史面试 <span id="histCount" class="count-badge">0</span></h3>
-          <div id="ivHistorical" class="iv-list iv-list-hist"></div>
-        </div>
-        <div class="card" id="ivDetail">
-          <p class="hint">选择左侧一次面试查看建议，并在下方问答窗口继续追问。</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 面试复盘（面试后沉淀） -->
-    <section class="panel" id="review">
-      <div class="card">
-        <div class="row-between">
-          <h3>复盘总览</h3>
-          <button class="btn" id="rvSyncBtn" title="从腾讯会议/元宝自动同步纪要">同步会议纪要</button>
-        </div>
-        <p class="hint">每场面试后沉淀一次。AI 会跨场次总结你的<b>稳定强项</b>与<b>反复出错点</b>，并自动迭代备战建议、简历与自我介绍。</p>
-        <div id="rvSummary" class="rv-summary"></div>
-      </div>
-
-      <div class="card">
-        <h3>新建面试复盘</h3>
-        <p class="hint">腾讯会议录制面试 元宝生成纪要 粘贴到下方（或上传 .txt/.md 文件），AI 自动做结构化复盘分析。</p>
-        <div class="form">
-          <div class="form-row">
-            <input id="rvCompany" placeholder="公司，如：字节跳动" />
-            <input id="rvRole" placeholder="岗位，如：AI 产品经理" />
+          <div class="card">
+            <h3 id="tdFormTitle">添加待办</h3>
+            <p class="hint">记录一切要跟进的事：面试 / 笔试提醒、写论文、牛客网刷题、改简历…… 不限求职相关。设个日期，逾期和临期会自动高亮。</p>
+            <div class="form">
+              <input id="tdTitle" placeholder="要做什么？如：完成论文开题报告初稿" />
+              <div class="form-row">
+                <input id="tdCategory" list="tdCatList" placeholder="分类（可自定义）" />
+                <datalist id="tdCatList"></datalist>
+                <select id="tdPriority" title="优先级">
+                  <option value="high">优先级：高</option>
+                  <option value="medium" selected>优先级：中</option>
+                  <option value="low">优先级：低</option>
+                </select>
+                <input id="tdDue" type="date" title="截止日期（提醒用，选填）" />
+              </div>
+              <textarea id="tdNote" rows="2" placeholder="备注（选填），如：重点写 DiD 方法部分"></textarea>
+              <div class="row-between">
+                <div>
+                  <button class="btn primary" id="tdAddBtn">+ 添加待办</button>
+                  <button class="btn" id="tdCancelEdit" style="display:none">取消</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="form-row">
-            <select id="rvRound">
-              <option value="AI 面">AI 面</option>
-              <option value="一面">一面</option>
-              <option value="二面">二面</option>
-              <option value="三面">三面</option>
-              <option value="HR 面">HR 面</option>
-              <option value="其他">其他</option>
-            </select>
-            <input id="rvDate" type="date" />
+          <div class="card">
+            <div class="td-toolbar">
+              <div class="td-filters" id="tdFilters">
+                <button class="chip active" data-filter="active">未完成</button>
+                <button class="chip" data-filter="all">全部</button>
+                <button class="chip" data-filter="done">已完成</button>
+              </div>
+              <div class="td-cats" id="tdCatFilters"></div>
+            </div>
+            <div id="tdSummary" class="td-summary"></div>
+            <div id="tdList" class="td-list"></div>
+            <div id="tdEmpty" class="empty" style="display:none">还没有待办，先在上面添加一个吧～</div>
           </div>
-          <textarea id="rvTranscript" placeholder="粘贴元宝生成的面试纪要全文…" style="min-height:150px"></textarea>
-          <label class="filelabel">或上传纪要文件（.txt / .md）
-            <input id="rvFile" type="file" accept=".txt,.md,.markdown,text/plain" />
-          </label>
-          <div id="rvFileInfo" class="hint"></div>
-          <button class="btn primary" id="rvCreate">AI 复盘分析</button>
-        </div>
-      </div>
+        </section>
 
-      <div class="card">
-        <h3>复盘记录（<span id="rvCount">0</span>）</h3>
-        <div id="rvList" class="rv-list"></div>
-      </div>
-
-      <div class="card" id="rvDetail" style="display:none"></div>
-    </section>
-
-
-    <!-- 简历生成 -->
-    <section class="panel" id="resume">
-      <div class="card">
-        <h3>AI 生成简历</h3>
-        <p class="hint">基于你的档案 + 目标岗位生成针对性简历。<b>信息不确定时 AI 会先向你提问</b>，确认后再生成，绝不编造。</p>
-        <div class="form">
-          <input id="rsTarget" placeholder="目标岗位，如：AI 产品经理（大模型方向）" />
-          <button class="btn primary" id="rsStart">开始生成</button>
-        </div>
-        <div id="rsQuestions" style="display:none"></div>
-        <div id="rsResult"></div>
-      </div>
-    </section>
-
-    <!-- Offer 对比 -->
-    <section class="panel" id="offers">
-      <div class="card">
-        <h3>录入 Offer</h3>
-        <p class="hint">薪资填数字即可（月薪单位 K，其余单位万）。系统会自动折算年包，并按城市生活成本算出<b>实际可支配收入</b>。</p>
-        <div class="form">
-          <div class="form-row">
-            <input id="ofCompany" placeholder="公司" />
-            <input id="ofRole" placeholder="岗位" />
+        <!-- ============ Offer 对比 ============ -->
+        <section class="panel" id="offers">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Offer 对比</h1>
+              <p class="page-sub">把年包、城市成本、成长性放到一起比</p>
+            </div>
           </div>
-          <div class="form-row">
-            <input id="ofCity" placeholder="城市（如 北京）" list="cityList" />
-            <datalist id="cityList"></datalist>
-            <input id="ofLevel" placeholder="职级（如 T5 / P5）" />
-          </div>
-          <div class="form-row">
-            <input id="ofBase" type="number" placeholder="月薪（K）" />
-            <input id="ofMonths" type="number" placeholder="发薪月数（如 15）" value="12" />
-          </div>
-          <div class="form-row">
-            <input id="ofBonus" type="number" placeholder="年终（万）" />
-            <input id="ofEquity" type="number" placeholder="期权/年（万）" />
-          </div>
-          <div class="form-row">
-            <input id="ofSignOn" type="number" placeholder="签字费（万）" />
-            <input id="ofGrowth" placeholder="成长性备注（业务前景/晋升）" />
-          </div>
-          <button class="btn primary" id="ofAdd">添加</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>已录入（<span id="ofCount">0</span>）</h3>
-        <div id="ofList" class="rv-list"></div>
-        <button class="btn primary" id="ofCompare" style="margin-top:12px">AI 全方位对比</button>
-      </div>
-      <div class="card" id="ofCompareResult" style="display:none"></div>
-    </section>
 
-    <!-- 我的作品 -->
-    <section class="panel" id="works">
-      <div class="card">
-        <h3>我的 vibecoding AI 作品集</h3>
-        <p class="hint">这里汇总你用 vibe coding 做出的所有 AI 作品，可直接写进简历 / 面试展示。</p>
-        <div id="worksGrid" class="works-grid"></div>
-      </div>
-    </section>
-
-    <!-- Agent（嵌入 dsh 的 offer-pilot 技能） -->
-    <section class="panel" id="agent">
-      <div class="card">
-        <div class="row-between">
-          <div>
-            <h3>Agent 工作台</h3>
-            <p class="hint" style="margin-top:4px">从 dsh 嵌入的 <code>offer-pilot</code> 技能——四大功能插件，点开进入独立工作台。</p>
+          <div class="card">
+            <h3>录入 Offer</h3>
+            <p class="hint">薪资填数字即可（月薪单位 K，其余单位万）。系统会自动折算年包，并按城市生活成本算出<b>实际可支配收入</b>。</p>
+            <div class="form">
+              <div class="form-row">
+                <input id="ofCompany" placeholder="公司" />
+                <input id="ofRole" placeholder="岗位" />
+              </div>
+              <div class="form-row">
+                <input id="ofCity" placeholder="城市（如 北京）" list="cityList" />
+                <datalist id="cityList"></datalist>
+                <input id="ofLevel" placeholder="职级（如 T5 / P5）" />
+              </div>
+              <div class="form-row">
+                <input id="ofBase" type="number" placeholder="月薪（K）" />
+                <input id="ofMonths" type="number" placeholder="发薪月数（如 15）" value="12" />
+              </div>
+              <div class="form-row">
+                <input id="ofBonus" type="number" placeholder="年终（万）" />
+                <input id="ofEquity" type="number" placeholder="期权/年（万）" />
+              </div>
+              <div class="form-row">
+                <input id="ofSignOn" type="number" placeholder="签字费（万）" />
+                <input id="ofGrowth" placeholder="成长性备注（业务前景/晋升）" />
+              </div>
+              <button class="btn primary" id="ofAdd">添加</button>
+            </div>
           </div>
-          <div id="agentMeta" class="agent-meta"></div>
-        </div>
-        <div id="agentUnavailable" class="hint" style="display:none">Agent 源文件不可用，请确认 <code>offer-pilot-agent/.dsh/skills/offer-pilot/SKILL.md</code> 存在。</div>
-        <div id="agentSkillGrid" class="agent-skill-grid"></div>
-      </div>
-      <!-- 工作台对话区（点开某个插件后展开） -->
-      <div class="card agent-workspace" id="agentWorkspace" style="display:none">
-        <div class="agent-workspace-header">
-          <button class="btn" id="agentBackBtn">返回插件列表</button>
-          <h3 id="agentCurrentSkill" style="margin:0"></h3>
-        </div>
-        <p class="hint" id="agentSkillDesc"></p>
-        <div id="agentChatLog" class="chat-log"></div>
-        <div class="chat-input-area">
-          <div class="chat-input">
-            <textarea id="agentInput" placeholder="描述你的需求，agent 会结合知识库给出建议…"></textarea>
-            <button class="btn primary" id="agentSend">调用</button>
+          <div class="card">
+            <h3>已录入（<span id="ofCount">0</span>）</h3>
+            <div id="ofList" class="rv-list"></div>
+            <button class="btn primary" id="ofCompare" style="margin-top:12px">AI 全方位对比</button>
           </div>
-        </div>
-      </div>
-    </section>
+          <div class="card" id="ofCompareResult" style="display:none"></div>
+        </section>
 
-    <!-- 设置 -->
-    <section class="panel" id="settings">
-      <div class="card" style="max-width:560px">
-        <h3>DeepSeek API Key</h3>
-        <p class="hint">本产品调用 DeepSeek 大模型。Key 仅保存在你本地 <code>data/store.json</code>，不会上传。获取：platform.deepseek.com API Keys。</p>
+        <!-- ============ Agent ============ -->
+        <section class="panel" id="agent">
+          <div class="card">
+            <div class="row-between">
+              <div>
+                <h3>Agent 工作台</h3>
+                <p class="hint" style="margin-top:4px">从 dsh 嵌入的 <code>offer-pilot</code> 技能——四大功能插件，点开进入独立工作台。</p>
+              </div>
+              <div id="agentMeta" class="agent-meta"></div>
+            </div>
+            <div id="agentUnavailable" class="hint" style="display:none">Agent 源文件不可用，请确认 <code>offer-pilot-agent/.dsh/skills/offer-pilot/SKILL.md</code> 存在。</div>
+            <div id="agentSkillGrid" class="agent-skill-grid"></div>
+          </div>
+          <div class="card agent-workspace" id="agentWorkspace" style="display:none">
+            <div class="agent-workspace-header">
+              <button class="btn" id="agentBackBtn">返回插件列表</button>
+              <h3 id="agentCurrentSkill" style="margin:0"></h3>
+            </div>
+            <p class="hint" id="agentSkillDesc"></p>
+            <div id="agentChatLog" class="chat-log"></div>
+            <div class="chat-input-area">
+              <div class="chat-input">
+                <textarea id="agentInput" placeholder="描述你的需求，agent 会结合知识库给出建议…"></textarea>
+                <button class="btn primary" id="agentSend">调用</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 设置 ============ -->
+        <section class="panel" id="settings">
+          <div class="card" style="max-width:560px">
+            <h3>DeepSeek API Key</h3>
+            <p class="hint">本产品调用 DeepSeek 大模型。Key 仅保存在你本地 <code>data/store.json</code>，不会上传。获取：platform.deepseek.com API Keys。</p>
+        <p class="hint" id="setKeyHint" style="display:none;color:var(--yellow)">当前是在线演示版：为安全起见，这里<b>不保存也不使用</b>访客填写的 Key，AI 能力由部署者统一配置。想用自己的 Key 与真实数据，请把项目 clone 到本地运行。</p>
         <div class="form">
           <input id="setKey" type="password" placeholder="sk-..." />
-          <input id="setModel" placeholder="模型（默认 deepseek-chat）" list="modelList" />
-          <datalist id="modelList">
-            <option value="deepseek-chat">
-            <option value="deepseek-reasoner">
-            <option value="deepseek-v3">
-          </datalist>
-          <button class="btn primary" id="setSave">保存</button>
-        </div>
-        <p id="setMsg" class="msg"></p>
-      </div>
+              <input id="setModel" placeholder="模型（默认 deepseek-chat）" list="modelList" />
+              <datalist id="modelList">
+                <option value="deepseek-chat">
+                <option value="deepseek-reasoner">
+                <option value="deepseek-v3">
+              </datalist>
+              <button class="btn primary" id="setSave">保存</button>
+            </div>
+            <p id="setMsg" class="msg"></p>
+          </div>
 
-      <div class="card" style="max-width:560px">
-        <h3>腾讯会议 API（可选）</h3>
-        <p class="hint">配置后可自动拉取会议「元宝纪要」生成复盘，不必手动粘贴。<b>前提</b>：商业版/企业版会议账号，且应用具备「查看企业录制」权限。凭证仅存本地 <code>data/store.json</code>。</p>
-        <div class="form">
-          <input id="mtAppId" placeholder="AppId（开放平台 SDK AppID）" />
-          <input id="mtSdkId" placeholder="SdkId（开放平台应用 SdkId）" />
-          <input id="mtSecretId" placeholder="SecretId（可选）" />
-          <input id="mtSecretKey" type="password" placeholder="SecretKey" />
-          <input id="mtUserId" placeholder="UserId（企业内用户标识）" />
-          <input id="mtSts" type="password" placeholder="STS-Token（2026-02 后新建应用必填，可留空）" />
-          <button class="btn primary" id="mtSave">保存会议凭证</button>
-        </div>
-        <p id="mtMsg" class="msg"></p>
-        <p id="mtStatus" class="hint"></p>
-      </div>
+          <div class="card" style="max-width:560px">
+            <h3>腾讯会议 API（可选）</h3>
+            <p class="hint">配置后可自动拉取会议「元宝纪要」生成复盘，不必手动粘贴。<b>前提</b>：商业版/企业版会议账号，且应用具备「查看企业录制」权限。凭证仅存本地 <code>data/store.json</code>。</p>
+            <div class="form">
+              <input id="mtAppId" placeholder="AppId（开放平台 SDK AppID）" />
+              <input id="mtSdkId" placeholder="SdkId（开放平台应用 SdkId）" />
+              <input id="mtSecretId" placeholder="SecretId（可选）" />
+              <input id="mtSecretKey" type="password" placeholder="SecretKey" />
+              <input id="mtUserId" placeholder="UserId（企业内用户标识）" />
+              <input id="mtSts" type="password" placeholder="STS-Token（2026-02 后新建应用必填，可留空）" />
+              <button class="btn primary" id="mtSave">保存会议凭证</button>
+            </div>
+            <p id="mtMsg" class="msg"></p>
+            <p id="mtStatus" class="hint"></p>
+          </div>
 
-      <div class="card" style="max-width:560px">
-        <h3>外观</h3>
-        <p class="hint">选择界面皮肤，或上传一张图片让 AI 提取配色生成专属主题。默认为商务风格，选择后立即生效并保存到本地。</p>
-        <div class="theme-list" id="themeList"></div>
-        <div class="form" style="margin-top:12px">
-          <label class="btn" style="display:inline-block;cursor:pointer;text-align:center">上传图片生成主题
-            <input id="themeImg" type="file" accept="image/*" style="display:none" />
-          </label>
-          <span id="themeStatus" class="hint" style="margin:0"></span>
-        </div>
-      </div>
-    </section>
-  </main>
+          <div class="card" style="max-width:560px">
+            <h3>外观</h3>
+            <p class="hint">选择界面皮肤，或上传一张图片让 AI 提取配色生成专属主题。默认为商务风格，选择后立即生效并保存到本地。</p>
+            <div class="theme-list" id="themeList"></div>
+            <div class="form" style="margin-top:12px">
+              <label class="btn" style="display:inline-block;cursor:pointer;text-align:center">上传图片生成主题
+                <input id="themeImg" type="file" accept="image/*" style="display:none" />
+              </label>
+              <span id="themeStatus" class="hint" style="margin:0"></span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
 
   <div id="toast" class="toast"></div>
   <script src="app.js"></script>

@@ -17,13 +17,28 @@ async function api(path, opts) {
   return j;
 }
 
-// ---------- tabs ----------
-$$(".tab").forEach((b) => b.addEventListener("click", () => {
-  $$(".tab").forEach((x) => x.classList.remove("active"));
+// ---------- 侧边栏导航 ----------
+function switchView(view) {
+  $$(".nav-item").forEach((x) => x.classList.remove("active"));
   $$(".panel").forEach((x) => x.classList.remove("active"));
-  b.classList.add("active");
-  $("#" + b.dataset.tab).classList.add("active");
-}));
+  const btn = $(`.nav-item[data-view="${view}"]`);
+  if (btn) btn.classList.add("active");
+  const panel = $("#" + view);
+  if (panel) panel.classList.add("active");
+  // 进入某页时按需刷新该页数据
+  if (view === "dashboard") renderDashboard();
+  if (view === "interview") loadReviews();
+}
+$$(".nav-item").forEach((b) => b.addEventListener("click", () => switchView(b.dataset.view)));
+
+// 面试页内部的「备战 / 复盘」子导航
+function switchSub(sub) {
+  const panel = $("#interview");
+  if (!panel) return;
+  panel.querySelectorAll(".chip[data-sub]").forEach((x) => x.classList.toggle("active", x.dataset.sub === sub));
+  panel.querySelectorAll(".sub-panel").forEach((x) => x.classList.toggle("active", x.dataset.sub === sub));
+}
+$$(".chip[data-sub]").forEach((b) => b.addEventListener("click", () => switchSub(b.dataset.sub)));
 
 // ---------- load ----------
 async function load() {
@@ -32,9 +47,32 @@ async function load() {
   renderApps();
   renderInterviews();
   renderWorks();
+  populateTdCatList();
+  await refreshTodos();
+  renderDashboard();
+  updateCounts();
   const kb = $("#keyBadge");
   kb.textContent = STATE.hasKey ? "API Key：已设置" : "API Key：未设置";
   kb.classList.toggle("ok", !!STATE.hasKey);
+
+  // 在线演示版：明确告知数据性质，避免误以为是自己的真实数据
+  const dn = $("#demoNotice");
+  if (STATE.demo) {
+    dn.style.display = "block";
+    dn.innerHTML = "<b>在线演示版</b>：这里跑的是示例数据，所有改动只存在这台演示服务器上，" +
+      "不会同步到任何人本机；为安全起见，演示版<b>不会保存你填写的 API Key</b>。" +
+      "想用自己的真实数据，把项目 clone 到本地跑即可（数据只在你自己电脑上）。";
+  } else {
+    dn.style.display = "none";
+  }
+  const setHint = $("#setKeyHint");
+  if (setHint) setHint.style.display = STATE.demo ? "block" : "none";
+  // 演示版：Key 输入禁用（写了也不会生效，不如直接不给错觉）
+  const setKey = $("#setKey");
+  if (setKey) {
+    setKey.disabled = !!STATE.demo;
+    setKey.placeholder = STATE.demo ? "演示版不保存 Key" : "sk-...";
+  }
   const notice = $("#aiNotice");
   if (!STATE.hasKey) {
     notice.style.display = "block";
@@ -53,11 +91,7 @@ async function load() {
 }
 
 function openSettings() {
-  $$(".tab").forEach((x) => x.classList.remove("active"));
-  $$(".panel").forEach((x) => x.classList.remove("active"));
-  const t = $('.tab[data-tab="settings"]');
-  if (t) t.classList.add("active");
-  $("#settings").classList.add("active");
+  switchView("settings");
 }
 
 // ---------- 首次启动引导 ----------
@@ -100,24 +134,42 @@ function renderProfile() {
     <div class="kv-row full-width">
       <div class="kv-label">目标岗位</div><div class="kv-val">${v(b.targetRoles)}</div>
     </div>`;
-  renderFacts();
   renderChat();
 }
-function renderFacts() {
-  // 词条一律短标签（后端已把每条压到 10 字以内）；被压缩掉的原文放在 title 里悬停可看
-  const attr = (s) => esc(String(s ?? "")).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  $("#facts").innerHTML = (STATE.profile.facts || [])
-    .map((f) => {
-      const line = `${f.key}：${f.value}`;
-      return `<div class="fact${f.detail ? " has-detail" : ""}" title="${attr(f.detail || line)}">` +
-        `<span class="fact-main">${esc(line)}</span>` +
-        `<small>来源：${esc(f.source || "—")} · ${esc(f.updatedAt || "—")}</small></div>`;
-    })
-    .join("") || "<span class='hint'>还没有沉淀的偏好，去右边聊聊吧。</span>";
+
+// 聊天默认只显示最近一轮（一问一答），不再整段铺成长图；点「查看完整对话」展开
+let CHAT_EXPANDED = false;
+
+function chatMsgHtml(m) {
+  const isUser = m.role === "user";
+  const avatar = isUser
+    ? `<div class="chat-avatar user-avatar">我</div>`
+    : `<div class="chat-avatar ai-avatar"><img src="assets/cat-mascot.svg" alt="助手" onerror="this.outerHTML='AI'" /></div>`;
+  const time = m.time ? fmtTime(m.time) : "";
+  let content = esc(m.text);
+  if (m.image) {
+    content += `<br><img src="${m.image}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;border:1px solid var(--line)" />`;
+  }
+  if (m.fileName && !m.image) {
+    content += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">${esc(m.fileName)}</span>`;
+  }
+  return `<div class="chat-row ${isUser ? "user" : "ai"}">
+    ${avatar}
+    <div>
+      <div class="chat-bubble">${content}</div>
+      ${time ? `<div class="chat-time">${time}</div>` : ""}
+    </div>
+  </div>`;
 }
+
 function renderChat() {
   const log = $("#chatLog");
   const h = STATE.profile.chatHistory || [];
+  const toggle = $("#chatToggle");
+  if (toggle) {
+    toggle.textContent = CHAT_EXPANDED ? "收起对话" : "查看完整对话";
+    toggle.style.display = h.length > 2 ? "inline-block" : "none";
+  }
   if (h.length === 0) {
     log.innerHTML = `<div style="text-align:center;color:var(--gray);padding:40px 0;font-size:13.5px">
       <div style="margin-bottom:8px"><img src="assets/cat-mascot.svg" alt="助手" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--primary-soft)" onerror="this.style.display='none'" /></div>
@@ -125,28 +177,11 @@ function renderChat() {
     </div>`;
     return;
   }
-  log.innerHTML = h.map((m) => {
-    const isUser = m.role === "user";
-    const avatar = isUser
-      ? `<div class="chat-avatar user-avatar">我</div>`
-      : `<div class="chat-avatar ai-avatar"><img src="assets/cat-mascot.svg" alt="助手" onerror="this.outerHTML='AI'" /></div>`;
-    const time = m.time ? fmtTime(m.time) : "";
-    // 如果消息附带图片
-    let content = esc(m.text);
-    if (m.image) {
-      content += `<br><img src="${m.image}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;border:1px solid var(--line)" />`;
-    }
-    if (m.fileName && !m.image) {
-      content += `<br><span style="display:inline-block;margin-top:4px;padding:3px 8px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted)">${esc(m.fileName)}</span>`;
-    }
-    return `<div class="chat-row ${isUser ? "user" : "ai"}">
-      ${avatar}
-      <div>
-        <div class="chat-bubble">${content}</div>
-        ${time ? `<div class="chat-time">${time}</div>` : ""}
-      </div>
-    </div>`;
-  }).join("");
+  const visible = CHAT_EXPANDED ? h : h.slice(-2);
+  const head = (!CHAT_EXPANDED && h.length > 2)
+    ? `<div class="chat-more">只显示最近一轮 · 共 ${h.length} 条，点右上角看完整对话</div>`
+    : "";
+  log.innerHTML = head + visible.map(chatMsgHtml).join("");
   log.scrollTop = log.scrollHeight;
 }
 function fmtTime(iso) {
@@ -196,16 +231,19 @@ $("#chatSend").addEventListener("click", async () => {
     // 更新 AI 回复
     aiRow.querySelector(".chat-bubble").textContent = "";
     aiRow.querySelector(".chat-bubble").innerHTML = formatAiReply(j.reply);
+    renderPoints("chatPoints", extractPoints(j.reply));
     // 添加时间戳
     const aiTime = document.createElement("div");
     aiTime.className = "chat-time";
     aiTime.textContent = fmtTime(new Date().toISOString());
     aiRow.querySelector("div > div").appendChild(aiTime);
 
-    // 沉淀档案（仅文字部分）
+    // 沉淀档案（仅文字部分）——静默进行，不再展示词条墙
     if (v) {
-      const ex = await api("/api/profile/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: v }) });
-      STATE.profile.facts = ex.facts; renderFacts();
+      try {
+        const ex = await api("/api/profile/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: v }) });
+        STATE.profile.facts = ex.facts;
+      } catch { /* 沉淀失败不影响对话 */ }
     }
 
     STATE.profile.chatHistory = STATE.profile.chatHistory || [];
@@ -213,8 +251,9 @@ $("#chatSend").addEventListener("click", async () => {
       { role: "user", text: v, time: now, ...(chatFileData ? { fileName: chatFileData.name, image: chatFileData.type.startsWith("image/") ? chatFileData.base64 : undefined } : {}) },
       { role: "assistant", text: j.reply, time: new Date().toISOString() }
     );
+    renderChat();
   } catch (e) {
-    aiRow.querySelector(".chat-bubble").textContent = "" + e.message + "（你也可以用左侧『手动添加』直接沉淀这条偏好）";
+    aiRow.querySelector(".chat-bubble").textContent = "" + e.message;
   }
   log.scrollTop = log.scrollHeight;
 
@@ -222,13 +261,40 @@ $("#chatSend").addEventListener("click", async () => {
   clearChatUpload();
 });
 
-// 格式化 AI 回复中的 markdown 风格内容
+/**
+ * 格式化 AI 回复。
+ * 排版规范（刻意和之前不同）：
+ *   - 标题用加粗 + 独立行，正文一律常规字重，不再整段糊成粗体；
+ *   - 行内 **强调** 只在短词组（≤12 字）上加粗，长句保持常规，避免"满屏加粗"；
+ *   - 列表渲染成真正的 ul/li，段落之间有间距，不再靠 <br> 堆成一坨。
+ */
 function formatAiReply(text) {
   if (!text) return "";
-  return esc(text)
-    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
-    .replace(/^- (.*)/gm, "• $1")
-    .replace(/\n/g, "<br>");
+  const lines = esc(text).split(/\r?\n/);
+  let html = "";
+  let inList = false;
+  const boldShort = (s) =>
+    s.replace(/\*\*(.+?)\*\*/g, (m, p1) => (p1.length <= 12 ? `<b>${p1}</b>` : p1));
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { if (inList) { html += "</ul>"; inList = false; } continue; }
+    if (/^#{1,3}\s+/.test(line)) {
+      if (inList) { html += "</ul>"; inList = false; }
+      const lv = Math.min((line.match(/^#+/) || ["#"])[0].length, 3);
+      html += `<div class="ai-h ai-h${lv}">${boldShort(line.replace(/^#{1,3}\s+/, ""))}</div>`;
+      continue;
+    }
+    if (/^([-*•·]|\d+[.、)])\s+/.test(line)) {
+      if (!inList) { html += `<ul class="ai-ul">`; inList = true; }
+      html += `<li>${boldShort(line.replace(/^([-*•·]|\d+[.、)])\s+/, ""))}</li>`;
+      continue;
+    }
+    if (inList) { html += "</ul>"; inList = false; }
+    html += `<p class="ai-p">${boldShort(line)}</p>`;
+  }
+  if (inList) html += "</ul>";
+  return html;
 }
 
 // ---------- 聊天区文件上传（选择 或 直接 Ctrl+V 粘贴） ----------
@@ -283,17 +349,10 @@ function clearChatUpload() {
   if (input) input.value = "";
 }
 
-// 手动记录偏好（无需 API）
-$("#factAddBtn").addEventListener("click", async () => {
-  const k = $("#factKey").value.trim();
-  const val = $("#factValue").value.trim();
-  if (!k || !val) { toast("请填写维度和内容"); return; }
-  try {
-    const j = await api("/api/profile/fact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: k, value: val }) });
-    STATE.profile.facts = j.facts; renderFacts();
-    $("#factKey").value = ""; $("#factValue").value = "";
-    toast("已沉淀偏好：" + k);
-  } catch (e) { toast("" + e.message); }
+// 聊天：展开 / 收起完整对话
+$("#chatToggle").addEventListener("click", () => {
+  CHAT_EXPANDED = !CHAT_EXPANDED;
+  renderChat();
 });
 
 // ---------- 按阶段智能推荐下一步 ----------
@@ -602,6 +661,421 @@ function renderWorks() {
       <div class="hl">亮点：${(w.highlights || []).join("、")}</div>
       <div class="link">${esc(w.link)}</div>
     </div>`).join("");
+}
+
+// ---------- 待办清单 ----------
+const TODO_CATS = ["面试", "笔试", "论文", "刷题", "简历", "投递", "其他"];
+const CAT_CLASS = {
+  面试: "cat-interview", 笔试: "cat-written", 论文: "cat-thesis",
+  刷题: "cat-practice", 简历: "cat-resume", 投递: "cat-apply", 其他: "cat-other",
+};
+let TD_FILTER = "active";
+let TD_CAT = "";
+let TD_EDIT_ID = null;
+
+const PRI_LABEL = { high: "高", medium: "中", low: "低" };
+function priLabel(p) { return PRI_LABEL[p] || "中"; }
+function catClass(c) { return CAT_CLASS[c] || "cat-other"; }
+
+function populateTdCatList() {
+  $("#tdCatList").innerHTML = TODO_CATS.map((c) => `<option value="${esc(c)}">`).join("");
+}
+
+function dueInfo(t) {
+  if (!t.due) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  if (t.done) return { cls: "td-due done", text: "已完成" };
+  if (t.due < today) {
+    const d = Math.max(1, Math.round((new Date(today) - new Date(t.due)) / 864e5));
+    return { cls: "td-due overdue", text: "已逾期 " + d + " 天" };
+  }
+  const days = Math.round((new Date(t.due) - new Date(today)) / 864e5);
+  if (days <= 3) return { cls: "td-due soon", text: "还有 " + days + " 天" };
+  return { cls: "td-due", text: t.due };
+}
+
+function cmpTodo(a, b) {
+  if (a.done !== b.done) return a.done ? 1 : -1;
+  const today = new Date().toISOString().slice(0, 10);
+  const ao = a.due && a.due < today && !a.done ? 0 : 1;
+  const bo = b.due && b.due < today && !b.done ? 0 : 1;
+  if (ao !== bo) return ao - bo;
+  if (a.due && b.due) { if (a.due !== b.due) return a.due < b.due ? -1 : 1; }
+  else if (a.due !== b.due) return a.due ? -1 : 1;
+  const pw = { high: 0, medium: 1, low: 2 };
+  if (pw[a.priority] !== pw[b.priority]) return pw[a.priority] - pw[b.priority];
+  return (b.createdAt || "") > (a.createdAt || "") ? 1 : -1;
+}
+
+function buildSummary() {
+  const today = new Date().toISOString().slice(0, 10);
+  const active = (STATE.todos || []).filter((t) => !t.done);
+  const overdue = active.filter((t) => t.due && t.due < today).length;
+  const soon = active.filter((t) => t.due && t.due >= today &&
+    Math.round((new Date(t.due) - new Date(today)) / 864e5) <= 3).length;
+  const done = (STATE.todos || []).filter((t) => t.done).length;
+  const parts = [];
+  if (overdue) parts.push(`<b class="warn">${overdue} 项逾期</b>`);
+  if (soon) parts.push(`<b class="soon">${soon} 项本周到期</b>`);
+  parts.push(`未完成 ${active.length} · 已完成 ${done}`);
+  return parts.join(" ｜ ");
+}
+
+function renderTodoCats(presets) {
+  const used = [...new Set((STATE.todos || []).map((t) => t.category))];
+  const cats = [...new Set([...(presets || TODO_CATS), ...used])];
+  $("#tdCatFilters").innerHTML =
+    `<button class="chip ${TD_CAT === "" ? "active" : ""}" data-cat="">全部分类</button>` +
+    cats.map((c) => `<button class="chip ${TD_CAT === c ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
+}
+
+function renderTodos() {
+  if (!STATE.todos) STATE.todos = [];
+  const list = STATE.todos.filter((t) => {
+    if (TD_FILTER === "active" && t.done) return false;
+    if (TD_FILTER === "done" && !t.done) return false;
+    if (TD_CAT && t.category !== TD_CAT) return false;
+    return true;
+  }).sort(cmpTodo);
+
+  $("#tdSummary").innerHTML = buildSummary();
+  const wrap = $("#tdList");
+  if (!list.length) {
+    wrap.innerHTML = "";
+    $("#tdEmpty").style.display = "block";
+    return;
+  }
+  $("#tdEmpty").style.display = "none";
+  wrap.innerHTML = list.map((t) => {
+    const di = dueInfo(t);
+    const steps = (t.steps || []).map((s, i) => `
+      <label class="td-step ${s.done ? "done" : ""}">
+        <input type="checkbox" data-act="step" data-i="${i}" ${s.done ? "checked" : ""} />
+        <span>${esc(s.text)}</span>
+      </label>`).join("");
+    return `
+    <div class="td-item ${t.done ? "done" : ""}" data-id="${t.id}">
+      <input type="checkbox" class="td-check" data-act="toggle" ${t.done ? "checked" : ""} title="标记完成" />
+      <div class="td-body">
+        <div class="td-top">
+          <span class="td-title">${esc(t.title)}</span>
+          <span class="td-cat ${catClass(t.category)}">${esc(t.category)}</span>
+          <span class="td-pri pri-${t.priority}">${priLabel(t.priority)}</span>
+          ${di ? `<span class="${di.cls}">${di.text}</span>` : ""}
+        </div>
+        ${t.note ? `<div class="td-note">${esc(t.note)}</div>` : ""}
+        ${steps ? `<div class="td-steps">${steps}</div>` : ""}
+      </div>
+      <div class="td-actions">
+        ${STATE.hasKey ? `<button class="btn-mini" data-act="breakdown">AI 拆解</button>` : ""}
+        <button class="btn-mini" data-act="edit">编辑</button>
+        <button class="btn-mini danger" data-act="del">删除</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function refreshTodos() {
+  try {
+    const j = await api("/api/todos");
+    STATE.todos = j.todos || [];
+    renderTodoCats(j.categories || TODO_CATS);
+    renderTodos();
+    updateTodoTab();
+  } catch (e) { toast(e.message); }
+}
+
+/** 统一的侧边栏角标刷新：待办(未完成) / 投递(总数) / 面试(即将) */
+function setBadge(id, n, always) {
+  const b = $("#" + id);
+  if (!b) return;
+  if (n > 0) { b.textContent = n; b.style.display = "inline-block"; }
+  else b.style.display = always ? "inline-block" : "none";
+}
+function updateTodoTab() {
+  const n = (STATE.todos || []).filter((t) => !t.done).length;
+  setBadge("navTodoCount", n);
+  if ($("#dashboard") && $("#dashboard").classList.contains("active")) renderDashboard();
+}
+function updateCounts() {
+  setBadge("navTodoCount", (STATE.todos || []).filter((t) => !t.done).length);
+  setBadge("navAppsCount", (STATE.applications || []).length);
+  const soon = (STATE.interviews || []).filter((i) => i.type !== "historical").length;
+  setBadge("navIvCount", soon);
+}
+
+function resetTdForm() {
+  TD_EDIT_ID = null;
+  $("#tdTitle").value = "";
+  $("#tdCategory").value = "";
+  $("#tdPriority").value = "medium";
+  $("#tdDue").value = "";
+  $("#tdNote").value = "";
+  $("#tdFormTitle").textContent = "添加待办";
+  $("#tdAddBtn").textContent = "+ 添加待办";
+  $("#tdCancelEdit").style.display = "none";
+}
+
+$("#tdAddBtn").addEventListener("click", async () => {
+  const title = $("#tdTitle").value.trim();
+  if (!title) { toast("请填写待办内容"); return; }
+  const body = {
+    title,
+    category: $("#tdCategory").value.trim() || "其他",
+    priority: $("#tdPriority").value,
+    due: $("#tdDue").value,
+    note: $("#tdNote").value.trim(),
+  };
+  try {
+    if (TD_EDIT_ID) {
+      await api(`/api/todos/${TD_EDIT_ID}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      toast("已更新");
+    } else {
+      await api("/api/todos", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      toast("已添加");
+    }
+    resetTdForm();
+    await refreshTodos();
+  } catch (e) { toast(e.message); }
+});
+
+$("#tdCancelEdit").addEventListener("click", resetTdForm);
+
+$("#tdFilters").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-filter]");
+  if (!b) return;
+  TD_FILTER = b.dataset.filter;
+  $$("#tdFilters .chip").forEach((x) => x.classList.remove("active"));
+  b.classList.add("active");
+  renderTodos();
+});
+
+$("#tdCatFilters").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-cat]");
+  if (!b) return;
+  TD_CAT = b.dataset.cat;
+  $$("#tdCatFilters .chip").forEach((x) => x.classList.remove("active"));
+  b.classList.add("active");
+  renderTodos();
+});
+
+$("#tdList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-act]");
+  if (!btn) return;
+  const item = e.target.closest(".td-item");
+  const id = item?.dataset.id;
+  const act = btn.dataset.act;
+  const t = (STATE.todos || []).find((x) => x.id === id);
+  if (!t) return;
+
+  if (act === "toggle") {
+    try {
+      await api(`/api/todos/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ done: !t.done }),
+      });
+      await refreshTodos();
+    } catch (err) { toast(err.message); }
+    return;
+  }
+  if (act === "step") {
+    const i = +btn.dataset.i;
+    t.steps[i].done = btn.checked;
+    try {
+      await api(`/api/todos/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steps: t.steps }),
+      });
+      renderTodos();
+    } catch (err) { toast(err.message); }
+    return;
+  }
+  if (act === "edit") {
+    TD_EDIT_ID = id;
+    $("#tdTitle").value = t.title;
+    $("#tdCategory").value = t.category;
+    $("#tdPriority").value = t.priority;
+    $("#tdDue").value = t.due || "";
+    $("#tdNote").value = t.note || "";
+    $("#tdFormTitle").textContent = "编辑待办";
+    $("#tdAddBtn").textContent = "保存修改";
+    $("#tdCancelEdit").style.display = "inline-block";
+    $("#tdTitle").focus();
+    return;
+  }
+  if (act === "del") {
+    if (!confirm("确定删除这条待办？")) return;
+    try {
+      await api(`/api/todos/${id}`, { method: "DELETE" });
+      toast("已删除");
+      await refreshTodos();
+    } catch (err) { toast(err.message); }
+    return;
+  }
+  if (act === "breakdown") {
+    btn.disabled = true;
+    btn.textContent = "拆解中…";
+    try {
+      const j = await api(`/api/todos/${id}/breakdown`, { method: "POST" });
+      if (j.ok) toast("已生成拆解步骤");
+      else toast(j.message || "拆解失败");
+      await refreshTodos();
+    } catch (err) { toast(err.message); }
+    finally { btn.disabled = false; btn.textContent = "AI 拆解"; }
+  }
+});
+
+// ---------- 工作台（把进度 / 待办 / 面试 / 分析融合到一个界面） ----------
+let INSIGHT = null;
+
+function renderDashboard() {
+  if (!STATE) return;
+  const apps = STATE.applications || [];
+  const ivs = STATE.interviews || [];
+  const todos = STATE.todos || [];
+  const offers = STATE.offers || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const active = todos.filter((t) => !t.done);
+  const overdue = active.filter((t) => t.due && t.due < today).length;
+  const soon = active.filter((t) => t.due && t.due >= today &&
+    Math.round((new Date(t.due) - new Date(today)) / 864e5) <= 3).length;
+  const goingOn = apps.filter((a) => a.stageKey !== "rejected").length;
+  const upcomingIv = ivs.filter((i) => i.type !== "historical").length;
+
+  const stats = [
+    { label: "进行中的投递", value: goingOn, hint: `共 ${apps.length} 家` },
+    { label: "未完成待办", value: active.length, hint: overdue ? `${overdue} 项逾期` : (soon ? `${soon} 项临期` : "节奏正常") },
+    { label: "接下来的面试", value: upcomingIv, hint: `历史 ${ivs.length - upcomingIv} 场` },
+    { label: "已收 Offer", value: offers.length, hint: offers.length ? "可比一比" : "继续冲" },
+  ];
+  $("#dashStats").innerHTML = stats.map((s) => `
+    <div class="stat">
+      <div class="stat-label">${esc(s.label)}</div>
+      <div class="stat-value">${s.value}</div>
+      <div class="stat-hint ${s.hint && s.hint.includes("逾期") ? "warn" : ""}">${esc(s.hint || "")}</div>
+    </div>`).join("");
+
+  const tdList = [...active].sort(cmpTodo).slice(0, 5);
+  $("#dashTodos").innerHTML = tdList.length
+    ? tdList.map((t) => {
+        const di = dueInfo(t);
+        return `<div class="td-item dash-row">
+          <div class="td-body">
+            <div class="td-top">
+              <span class="td-title">${esc(t.title)}</span>
+              <span class="td-cat ${catClass(t.category)}">${esc(t.category)}</span>
+              ${di ? `<span class="${di.cls}">${di.text}</span>` : ""}
+            </div>
+          </div>
+        </div>`;
+      }).join("")
+    : `<div class="empty">今天没有待办，干净</div>`;
+
+  const upList = ivs.filter((i) => i.type !== "historical").slice(0, 5);
+  $("#dashInterviews").innerHTML = upList.length
+    ? upList.map((i) => `
+      <div class="td-item dash-row">
+        <div class="td-body">
+          <div class="td-top">
+            <span class="td-title">${esc(i.company)} · ${esc(i.role)}</span>
+            ${i.ddl ? `<span class="td-due">${esc(fmtDdl(i.ddl))}</span>` : ""}
+          </div>
+        </div>
+      </div>`).join("")
+    : `<div class="empty">还没有安排面试</div>`;
+}
+
+// ---------- 导出（Word / Excel，服务端生成后直接下载） ----------
+async function downloadExport(path, body, fallbackName) {
+  try {
+    const r = await fetch(path, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || "导出失败");
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get("Content-Disposition") || "";
+    const m = cd.match(/filename\*=UTF-8''(.+)/);
+    const name = m ? decodeURIComponent(m[1]) : fallbackName;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+    toast("已导出 " + name);
+  } catch (e) { toast(e.message); }
+}
+
+$("#appExportBtn").addEventListener("click", () => {
+  if (!(STATE.applications || []).length) { toast("还没有投递记录"); return; }
+  downloadExport("/api/export/applications", {}, "投递清单.xlsx");
+});
+
+$("#insightExportBtn").addEventListener("click", () => {
+  const d = INSIGHT;
+  if (!d) { toast("数据还在加载，稍等一下"); return; }
+  const s = d.summary || {};
+  const overview = [["指标", "数值"]];
+  Object.entries(s).forEach(([k, v]) => overview.push([k, typeof v === "number" ? v : String(v)]));
+  const funnel = [["环节", "数量"], ...((d.funnel || []).map((f) => [f.label || f.stage || "", f.count ?? f.value ?? ""]))];
+  const conv = [["环节", "转化率"], ...((d.conversion || []).map((c) => [c.label || c.stage || "", c.rate ?? c.value ?? ""]))];
+  const channels = [["渠道", "投递数", "进面数"], ...((d.channels || []).map((c) => [c.channel || c.name || "", c.total ?? "", c.interview ?? c.passed ?? ""]))];
+  downloadExport("/api/export/xlsx", {
+    sheets: [overview, funnel, conv, channels].map((rows, i) => ({
+      name: ["总览", "漏斗", "转化率", "渠道"][i], rows,
+    })),
+    filename: "求职洞察",
+  }, "求职洞察.xlsx");
+});
+
+$("#chatExportBtn").addEventListener("click", () => {
+  const hist = (STATE.profile && STATE.profile.chatHistory) || [];
+  if (!hist.length) { toast("还没有对话内容"); return; }
+  const blocks = [];
+  hist.slice(-20).forEach((m) => {
+    blocks.push({ type: "h2", text: m.role === "user" ? "我" : "AI 助手" });
+    String(m.text || "").split(/\r?\n/).filter((x) => x.trim())
+      .forEach((line) => blocks.push({ type: "p", text: line.trim() }));
+  });
+  downloadExport("/api/export/docx", { title: "对话记录", blocks, filename: "对话记录" }, "对话记录.docx");
+});
+
+// ---------- AI 内容：结构化排版 + 要点提取 ----------
+/** 从 AI 文本里抽出要点（标题行 + 列表项；没有结构就取前几句） */
+function extractPoints(text) {
+  if (!text) return [];
+  const lines = String(text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const pts = [];
+  for (const l of lines) {
+    if (/^#{1,3}\s+/.test(l)) { pts.push({ t: l.replace(/^#{1,3}\s+/, ""), k: "h" }); continue; }
+    if (/^[-*•·]\s+/.test(l)) { pts.push({ t: l.replace(/^[-*•·]\s+/, "").replace(/\*\*/g, ""), k: "li" }); continue; }
+    if (/^\d+[.、)]\s+/.test(l)) { pts.push({ t: l.replace(/^\d+[.、)]\s+/, "").replace(/\*\*/g, ""), k: "li" }); continue; }
+  }
+  if (!pts.length) {
+    String(text).split(/[。！？\n]/).map((s) => s.trim())
+      .filter((s) => s.length > 8).slice(0, 4)
+      .forEach((s) => pts.push({ t: s.replace(/\*\*/g, ""), k: "li" }));
+  }
+  return pts.slice(0, 8);
+}
+
+function renderPoints(id, points) {
+  const box = $("#" + id);
+  if (!box) return;
+  if (!points || !points.length) {
+    box.innerHTML = `<div class="ai-points-title">要点</div><div class="ai-points-empty">聊完之后，这里只留结论</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="ai-points-title">要点</div><ul class="ai-points-list">` +
+    points.map((p) => `<li class="${p.k === "h" ? "pt-h" : ""}">${esc(p.t)}</li>`).join("") +
+    `</ul>`;
 }
 
 // ---------- settings ----------
@@ -1226,14 +1700,36 @@ function renderResume(r) {
   $("#rsQuestions").style.display = "none";
   const hl = (r.highlights || []).map((x) => `<li>${esc(x)}</li>`).join("");
   const tp = (r.tips || []).map((x) => `<li>${esc(x)}</li>`).join("");
+  const points = [];
+  if ((r.highlights || []).length) {
+    points.push({ t: "本版亮点", k: "h" });
+    (r.highlights || []).forEach((x) => points.push({ t: x, k: "li" }));
+  }
+  if ((r.tips || []).length) {
+    points.push({ t: "投递前建议", k: "h" });
+    (r.tips || []).forEach((x) => points.push({ t: x, k: "li" }));
+  }
   $("#rsResult").innerHTML = `
     <div class="rv-detail-head" style="margin-top:14px">
       <h3>已生成：${esc(r.targetRole)}<span style="font-weight:400;color:var(--muted);font-size:12px;margin-left:8px">${esc(r.updatedAt || "")}</span></h3>
-      <button class="btn" id="rsCopy">复制简历</button>
+      <div class="export-row">
+        <button class="btn" id="rsExportDocx">导出 Word</button>
+        <button class="btn" id="rsExportXlsx">导出 Excel</button>
+        <button class="btn" id="rsCopy">复制简历</button>
+      </div>
     </div>
-    ${hl ? `<div class="rv-section"><h4>本版亮点</h4><ul>${hl}</ul></div>` : ""}
-    <pre class="rv-transcript" style="max-height:none;font-family:-apple-system,'PingFang SC',sans-serif;line-height:1.75">${esc(r.markdown)}</pre>
+    <div class="ai-split">
+      <div class="ai-main">
+        <pre class="rv-transcript" style="max-height:none;font-family:-apple-system,'PingFang SC',sans-serif;line-height:1.75">${esc(r.markdown)}</pre>
+      </div>
+      <div class="ai-points" id="rsPoints"></div>
+    </div>
     ${tp ? `<div class="rv-section" style="margin-top:12px"><h4>投递前建议</h4><ul>${tp}</ul></div>` : ""}`;
+  renderPoints("rsPoints", points);
+  $("#rsExportDocx").addEventListener("click", () =>
+    downloadExport("/api/export/resume", { format: "docx" }, "简历.docx"));
+  $("#rsExportXlsx").addEventListener("click", () =>
+    downloadExport("/api/export/resume", { format: "xlsx" }, "简历.xlsx"));
   $("#rsCopy").addEventListener("click", () => copyText(r.markdown));
   toast("简历已生成");
 }
@@ -1394,6 +1890,7 @@ $("#obSkip").addEventListener("click", async () => {
 async function loadInsights() {
   try {
     const j = await api("/api/insights");
+    INSIGHT = j.insights || null;
     renderInsights(j.insights, j.reviewSummary);
   } catch (e) {
     $("#insightSummary").innerHTML = `<span class="hint">⚠ ${esc(e.message)}</span>`;
@@ -1521,21 +2018,62 @@ function renderJdMatch(m) {
   const block = (t, txt) =>
     txt ? `<div class="rv-section"><h4>${t}</h4><div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${esc(txt)}</div></div>` : "";
 
+  const jdPoints = [
+    { t: `匹配度 ${score}/100 · ${m.verdict || ""}`, k: "h" },
+    ...((m.matches || []).slice(0, 3).map((x) => ({ t: "对上：" + x, k: "li" }))),
+    ...((m.gaps || []).slice(0, 3).map((x) => ({ t: "还缺：" + x, k: "li" }))),
+  ];
   box.innerHTML = `
-    <div class="jd-score-row">
-      <div class="jd-score" style="color:${color}">${score}<small>/100</small></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:650">${esc(m.verdict || "")}</div>
-        <div class="hint" style="margin-top:2px">${esc(m.oneLine || "")}</div>
+    <div class="rv-detail-head">
+      <h3>匹配度分析</h3>
+      <div class="export-row">
+        <button class="btn" id="jdExportDocx">导出 Word</button>
+        <button class="btn" id="jdExportXlsx">导出 Excel</button>
       </div>
     </div>
-    ${list("✅ 对上了什么", m.matches)}
-    ${list("⚠️ 还缺什么", m.gaps)}
-    ${m.keywords && m.keywords.length
-      ? `<div class="rv-section"><h4>🔑 简历该补的关键词</h4><div class="ins-kw">${m.keywords.map((k) => `<span class="ins-kw-item">${esc(k)}</span>`).join("")}</div></div>`
-      : ""}
-    ${block("🎯 投之前该做什么", m.advice)}
-    ${block("🕳 这个岗位可能的坑", m.risk)}`;
+    <div class="ai-split">
+      <div class="ai-main">
+        <div class="jd-score-row">
+          <div class="jd-score" style="color:${color}">${score}<small>/100</small></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:650">${esc(m.verdict || "")}</div>
+            <div class="hint" style="margin-top:2px">${esc(m.oneLine || "")}</div>
+          </div>
+        </div>
+        ${list("✅ 对上了什么", m.matches)}
+        ${list("⚠️ 还缺什么", m.gaps)}
+        ${m.keywords && m.keywords.length
+          ? `<div class="rv-section"><h4>🔑 简历该补的关键词</h4><div class="ins-kw">${m.keywords.map((k) => `<span class="ins-kw-item">${esc(k)}</span>`).join("")}</div></div>`
+          : ""}
+        ${block("🎯 投之前该做什么", m.advice)}
+        ${block("🕳 这个岗位可能的坑", m.risk)}
+      </div>
+      <div class="ai-points" id="jdPoints"></div>
+    </div>`;
+  renderPoints("jdPoints", jdPoints);
+  const jdBlocks = [
+    { type: "h1", text: `匹配度 ${score}/100 · ${m.verdict || ""}` },
+    { type: "p", text: m.oneLine || "" },
+    ...((m.matches || []).map((x) => ({ type: "li", text: "对上：" + x }))),
+    ...((m.gaps || []).map((x) => ({ type: "li", text: "还缺：" + x }))),
+  ];
+  if (m.advice) jdBlocks.push({ type: "h1", text: "投之前该做什么" }, { type: "p", text: m.advice });
+  if (m.risk) jdBlocks.push({ type: "h1", text: "这个岗位可能的坑" }, { type: "p", text: m.risk });
+  $("#jdExportDocx").addEventListener("click", () =>
+    downloadExport("/api/export/docx", { title: "JD 匹配度分析", blocks: jdBlocks, filename: "JD匹配度" }, "JD匹配度.docx"));
+  $("#jdExportXlsx").addEventListener("click", () => downloadExport("/api/export/xlsx", {
+    sheets: [{
+      name: "匹配度",
+      rows: [
+        ["项目", "内容"],
+        ["匹配度", score], ["结论", m.verdict || ""], ["一句话", m.oneLine || ""],
+        ...(m.matches || []).map((x) => ["对上了", x]),
+        ...(m.gaps || []).map((x) => ["还缺", x]),
+        ...((m.keywords || []).map((k) => ["建议补的关键词", k])),
+      ],
+    }],
+    filename: "JD匹配度",
+  }, "JD匹配度.xlsx"));
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 

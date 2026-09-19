@@ -12,6 +12,10 @@ data/store.json.*
 data/store.json.tmp
 data/store.json.corrupt-*
 
+# 演示模式运行时数据（云端实例跑示例数据时的可写副本，由 store.demo.json 生成）
+data/demo.runtime.json
+data/demo.runtime.json.*
+
 # 使用者的私有知识库（从 agent-kb.example 生成，含个人信息）
 # 模板 agent-kb.example/ 会被提交
 agent-kb/

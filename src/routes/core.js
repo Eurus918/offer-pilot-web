@@ -5,6 +5,7 @@ import { Router } from "express";
 import { onboardingState } from "../store.js";
 import { asyncHandler, badRequest } from "../errors.js";
 import { cityList } from "../services/offerService.js";
+import { DEMO_MODE } from "../config.js";
 
 export function registerCore(router, ctx) {
   /** 全局状态 */
@@ -13,11 +14,13 @@ export function registerCore(router, ctx) {
       profile: ctx.store.profile,
       applications: ctx.store.applications,
       interviews: ctx.store.interviews,
+      todos: ctx.store.todos || [],
       works: ctx.store.works,
       reviews: ctx.store.reviews,
       offers: ctx.store.offers,
       resume: ctx.store.resume || null,
       offerCompare: ctx.store.offerCompare || null,
+      demo: DEMO_MODE,
       hasKey: ctx.hasKey(),
       model: ctx.getModel(),
       theme: ctx.store.config?.theme || null,
@@ -31,7 +34,9 @@ export function registerCore(router, ctx) {
     "/api/config",
     asyncHandler(async (req, res) => {
       const { apiKey, model, meeting, theme } = req.body || {};
-      if (apiKey !== undefined) ctx.store.config.apiKey = String(apiKey).trim();
+      // 演示模式：访客填的 Key 绝不落盘。
+      // 否则你的 Key 会被写进共享的演示数据里、被其他访客看到，风险不可接受。
+      if (apiKey !== undefined && !DEMO_MODE) ctx.store.config.apiKey = String(apiKey).trim();
       if (model !== undefined) ctx.store.config.model = String(model).trim();
       if (meeting && typeof meeting === "object") {
         ctx.store.config.meeting = { ...(ctx.store.config.meeting || {}), ...meeting };

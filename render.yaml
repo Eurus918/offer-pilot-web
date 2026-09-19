@@ -8,11 +8,17 @@ services:
     branch: main
     buildCommand: npm install
     startCommand: npm start
-    # 健康检查走一个无副作用的 GET 接口
-    healthCheckPath: /api/state
+    # 健康检查走无副作用的专用接口（不要打 /api/state，它会读整份数据）
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "20"
-      # API Key 不写在这里，需在 Render 控制台手动填（sync: false 表示不自动同步）
+      # 演示模式：数据只跑示例数据，且访客填写的 API Key 不落盘。
+      # 关掉它就会读写 data/store.json（公网部署不建议）。
+      - key: OFFER_PILOT_DEMO
+        value: "true"
+      # API Key 不写在这里，需在 Render 控制台手动填（sync: false 表示不自动同步）。
+      # 不填也能部署：工作台/洞察/投递/待办/Offer/导出都不依赖 AI，只是没有 AI 功能。
+      # 填了则所有访客共用这个 Key，调用量记在你的账号上，请留意额度。
       - key: DEEPSEEK_API_KEY
         sync: false
