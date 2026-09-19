@@ -1,0 +1,8 @@
+node_modules/
+.git/
+data/store.json
+data/store.json.corrupt-*
+agent-kb/
+.env
+*.log
+.DS_Store

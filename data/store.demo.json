@@ -1,104 +1,167 @@
 {
+  "config": {
+    "model": "deepseek-chat",
+    "apiKey": "",
+    "meeting": {},
+    "theme": null
+  },
   "profile": {
     "basics": {
-      "name": "示例用户",
+      "name": "示例同学",
       "phone": "138****0000",
-      "email": "your-email@example.com",
+      "email": "demo@example.com",
       "city": "北京",
-      "age": 24,
-      "political": "群众",
-      "education": "XX大学 某专业硕士（示例数据，请替换为你的真实信息）",
-      "targetRoles": "产品经理 / AI 产品经理"
+      "age": "24",
+      "political": "",
+      "education": "XX大学 计算机科学与技术 硕士（示例数据）",
+      "targetRoles": "AI 产品经理 / 大模型产品经理"
     },
     "facts": [
-      {
-        "key": "期望 base",
-        "value": "北京 / 上海",
-        "source": "手动添加",
-        "updatedAt": "2026-09-01"
-      },
-      {
-        "key": "业务偏好",
-        "value": "偏 toC 的 AI 产品",
-        "source": "手动添加",
-        "updatedAt": "2026-09-01"
-      }
+      { "key": "期望 base", "value": "北京 / 上海", "source": "手动记录", "updatedAt": "2026-09-01" },
+      { "key": "业务偏好", "value": "偏 toC 的 AI 应用产品", "source": "手动记录", "updatedAt": "2026-09-01" },
+      { "key": "最在意", "value": "业务方向 > 团队 > 薪资", "source": "对话沉淀", "updatedAt": "2026-09-05" }
     ],
     "chatHistory": []
   },
   "applications": [
-    {
-      "id": "ex-1",
-      "company": "示例公司A",
-      "role": "产品培训生",
-      "channel": "",
-      "applyDate": "",
-      "stage": "简历评估中",
-      "stageKey": "review",
-      "next": "关注邮箱/短信评估通知",
-      "interviewAt": "",
-      "contact": ""
-    },
-    {
-      "id": "ex-2",
-      "company": "示例公司B",
-      "role": "AI 产品",
-      "channel": "",
-      "applyDate": "",
-      "stage": "待笔试",
-      "stageKey": "written_pending",
-      "next": "等笔试链接；超 5 工作日可礼貌催问",
-      "interviewAt": "",
-      "contact": ""
-    }
+    { "id": "demo-1", "company": "示例公司 A", "role": "AI 产品经理（校招）", "channel": "内推", "applyDate": "2026-08-05", "stage": "已 offer", "stageKey": "offer", "next": "对比总包，谈签约时间", "interviewAt": "", "contact": "" },
+    { "id": "demo-2", "company": "示例公司 B", "role": "大模型产品（校招）", "channel": "官网投递", "applyDate": "2026-08-08", "stage": "HR 面", "stageKey": "hr", "next": "准备薪资预期与到岗时间", "interviewAt": "2026-09-22", "contact": "" },
+    { "id": "demo-3", "company": "示例公司 C", "role": "产品培训生", "channel": "校招群", "applyDate": "2026-08-12", "stage": "二面", "stageKey": "interview2", "next": "复盘一面，准备业务理解", "interviewAt": "2026-09-24", "contact": "" },
+    { "id": "demo-4", "company": "示例公司 D", "role": "AI 产品（搜索方向）", "channel": "内推", "applyDate": "2026-08-15", "stage": "一面", "stageKey": "interview1", "next": "约面后排期备战", "interviewAt": "2026-09-21", "contact": "" },
+    { "id": "demo-5", "company": "示例公司 E", "role": "产品经理（数据方向）", "channel": "官网投递", "applyDate": "2026-08-20", "stage": "笔试完成", "stageKey": "written_done", "next": "等结果，一般 3-7 个工作日出", "interviewAt": "", "contact": "" },
+    { "id": "demo-6", "company": "示例公司 F", "role": "AI 产品经理", "channel": "官网投递", "applyDate": "2026-08-22", "stage": "待笔试", "stageKey": "written_pending", "next": "等笔试链接；超 5 工作日可催问", "interviewAt": "", "contact": "" },
+    { "id": "demo-7", "company": "示例公司 G", "role": "产品培训生", "channel": "校招群", "applyDate": "2026-08-26", "stage": "简历评估中", "stageKey": "review", "next": "关注邮箱/短信评估通知", "interviewAt": "", "contact": "" },
+    { "id": "demo-8", "company": "示例公司 H", "role": "大模型应用产品", "channel": "内推", "applyDate": "2026-08-28", "stage": "简历筛选中", "stageKey": "screening", "next": "等结果；超 7 个工作日可催问", "interviewAt": "", "contact": "" },
+    { "id": "demo-9", "company": "示例公司 I", "role": "产品经理", "channel": "猎头", "applyDate": "2026-08-02", "stage": "已结束", "stageKey": "rejected", "next": "复盘原因，同步更新备战重点", "interviewAt": "", "contact": "" },
+    { "id": "demo-10", "company": "示例公司 J", "role": "AI 产品（内容方向）", "channel": "校招群", "applyDate": "2026-08-04", "stage": "已结束", "stageKey": "rejected", "next": "笔试未通过，补估算题与案例分析", "interviewAt": "", "contact": "" }
   ],
   "interviews": [
     {
-      "id": "ex-iv-1",
-      "company": "示例公司B",
-      "role": "AI 产品",
+      "id": "demo-iv-1",
+      "company": "示例公司 B",
+      "role": "大模型产品（校招）",
       "type": "upcoming",
       "status": "pending",
-      "ddl": "",
-      "jdText": "（示例：收到正式 JD 后可上传图片生成备战建议）",
+      "ddl": "2026-09-22T14:00",
+      "ddlReminder": false,
+      "jdText": "（示例 JD）负责大模型应用的场景挖掘与产品设计；与算法、工程协作推动落地；基于数据与反馈持续迭代。要求熟悉 RAG / Agent / Prompt Engineering 基本原理，有 AI 产品实习或项目经历。",
+      "jdImage": "",
       "prep": {
-        "selfIntro": "（示例）结合我的 XX 经历，我擅长……",
+        "selfIntro": "（示例）面试官好，我是 XX 大学计算机硕士，目标方向是大模型产品。我做过一段从 0 到 1 的 AI 应用：背景是 XX，我负责 XX，结果是 XX。今天想结合这个岗位聊一聊。",
         "questions": [
-          {
-            "q": "为什么想做 AI 产品？",
-            "a": "（示例回答）……"
-          }
+          { "q": "讲一个你做过的 AI 产品，说清你的角色和结果。", "a": "（示例）用 STAR 讲：背景→我负责→关键动作→量化结果，最后补一句可复盘点。" },
+          { "q": "你怎么判断一个场景该不该用大模型？", "a": "（示例）从任务确定性、容错成本、数据可得性三个维度判断，并说明兜底策略。" }
         ],
-        "knowledge": "（示例）建议提前了解：Agent 产品形态、RAG 原理"
+        "knowledge": "（示例）① 该公司最近的 AI 产品动作；② RAG 的检索-召回-重排链路；③ Agent 的 badcase 与人工兜底设计。"
       },
-      "chat": []
+      "chat": [],
+      "createdAt": "2026-09-10"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "demo-rv-1",
+      "company": "示例公司 I",
+      "role": "产品经理",
+      "round": "一面",
+      "date": "2026-08-20",
+      "source": "manual",
+      "transcript": "（示例纪要）面试官问了我做过的一个项目，我讲了背景和功能，但被追问指标怎么定的时候答得含糊。最后反问环节我问了团队分工。",
+      "analysis": {
+        "summary": "项目能讲清楚功能，但讲不清指标口径，说明对结果的归因不够扎实。",
+        "score": 4,
+        "strengths": ["项目背景讲得清楚，逻辑顺序没问题"],
+        "weaknesses": ["被追问指标口径时答不上来，只说了'涨了'没说怎么算的"],
+        "knowledgeGaps": ["指标拆解与归因方法", "A/B 实验的基本流程"],
+        "nextPrep": ["把每个项目的核心指标口径背熟", "准备一段'这个数字是怎么算出来的'的回答"],
+        "frameworks": ["项目讲述三段式：背景与目标 → 我做了什么 → 结果怎么衡量"],
+        "resumeHints": ["简历里补一句指标定义，不要只写增长结果"]
+      },
+      "createdAt": "2026-08-20"
     },
     {
-      "id": "ex-iv-2",
-      "company": "示例公司C",
-      "role": "产品经理",
-      "type": "historical",
-      "status": "failed",
-      "result": "一面挂",
-      "jdText": "",
-      "prep": {
-        "selfIntro": "",
-        "questions": [],
-        "knowledge": ""
+      "id": "demo-rv-2",
+      "company": "示例公司 J",
+      "role": "AI 产品（内容方向）",
+      "round": "笔试",
+      "date": "2026-09-01",
+      "source": "manual",
+      "transcript": "（示例纪要）笔试有一道估算题，我直接给了个数但没说推导过程。案例分析题我写了功能清单，没有优先级。",
+      "analysis": {
+        "summary": "估算题缺推导过程，案例分析缺优先级判断，属于典型的'想到了但没写清楚'。",
+        "score": 6,
+        "strengths": ["案例分析覆盖了主要用户场景"],
+        "weaknesses": ["估算题直接给答案，没有拆解过程", "功能清单没有优先级"],
+        "knowledgeGaps": ["估算题的拆解方法（从规模到频次）", "需求优先级的判断框架"],
+        "nextPrep": ["练 3 道估算题，把推导写完整", "用'用户价值×实现成本'给需求排序"],
+        "frameworks": ["估算题：先说假设 → 拆解 → 给出量级结论"],
+        "resumeHints": []
       },
-      "chat": []
+      "createdAt": "2026-09-01"
+    },
+    {
+      "id": "demo-rv-3",
+      "company": "示例公司 C",
+      "role": "产品培训生",
+      "round": "二面",
+      "date": "2026-09-12",
+      "source": "manual",
+      "transcript": "（示例纪要）这次我提前背了指标口径，被追问时答出来了。讲到 badcase 处理时我说了兜底策略和触发条件，面试官点了头。",
+      "analysis": {
+        "summary": "比上次明显进步，指标口径和兜底策略都答到位了，可以往更高阶的业务判断上准备。",
+        "score": 8,
+        "strengths": ["指标口径答得清楚，说明上次复盘的点补上了", "badcase 讲出了兜底策略和触发条件"],
+        "weaknesses": ["对公司业务的理解还停留在产品层面，没聊到商业模式"],
+        "knowledgeGaps": ["该公司的商业模式与变现路径"],
+        "nextPrep": ["研究目标公司的商业模式", "准备'这个产品怎么赚钱'的回答"],
+        "frameworks": ["项目讲述三段式：背景与目标 → 我做了什么 → 结果怎么衡量"],
+        "resumeHints": []
+      },
+      "createdAt": "2026-09-12"
+    }
+  ],
+  "offers": [
+    {
+      "id": "demo-of-1",
+      "company": "示例公司 A",
+      "role": "AI 产品经理",
+      "city": "北京",
+      "level": "校招 SP",
+      "baseMonth": 28,
+      "months": 16,
+      "bonus": 6,
+      "equity": 0,
+      "signOn": 3,
+      "growth": "核心业务线，AI 是今年重点投入方向",
+      "notes": "导师制，半年一次晋升窗口",
+      "createdAt": "2026-09-10"
+    },
+    {
+      "id": "demo-of-2",
+      "company": "示例公司 B",
+      "role": "大模型产品",
+      "city": "上海",
+      "level": "校招",
+      "baseMonth": 25,
+      "months": 14,
+      "bonus": 4,
+      "equity": 8,
+      "signOn": 0,
+      "growth": "新成立的大模型团队，空间大但不确定",
+      "notes": "期权分四年行权",
+      "createdAt": "2026-09-12"
     }
   ],
   "works": [
     {
-      "id": "ex-w-1",
-      "title": "示例作品：XX 产品设计方案",
-      "url": "",
-      "desc": "（示例）一句话描述你的作品集链接 / 项目说明",
-      "tag": "产品设计"
+      "id": "demo-w-1",
+      "title": "（示例）AI 简历助手",
+      "desc": "把简历和 JD 做匹配度分析的小工具",
+      "stack": "Node.js / DeepSeek API / 原生前端",
+      "link": "https://github.com/"
     }
   ],
-  "config": {
-    "model": "deepseek-chat"
-  }
+  "resume": null,
+  "offerCompare": null,
+  "onboarding": { "done": true, "seededFrom": "demo" }
 }

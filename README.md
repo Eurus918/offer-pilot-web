@@ -1,167 +1,199 @@
-# Offer Pilot · 秋招 AI 产品岗个人助手
+# Offer Pilot · 求职 AI 助手
 
-> **一个独立运行的 AI 求职助手**——帮秋招候选人沉淀个人画像、管理 18 家公司的投递进度、上传 JD 图文自动备战面试，并嵌入 4 大 dsh Agent 插件让 AI 真正"懂"你的求职场景。
+> 一个跑在你本机的求职助手——管投递进度、看 JD 值不值得投、AI 陪你练面试、面完自动复盘。
 >
-> 全栈 vibe coding 独立开发 · MIT 开源 · Key 不离开本机
+> **数据只存在你自己的电脑上。AI 只讲你写过的经历，不会替你编。**
 
 <p align="center">
-  <img src="docs/screenshots/02-apps.png" alt="Offer Pilot · 投递进度" width="800">
+  <img src="docs/screenshots/04-insights.png" alt="求职洞察" width="860">
 </p>
 
 ---
 
-## 🎯 它解决什么问题
+## 它解决什么问题
 
-秋招季同时投十几二十家产品岗，每个公司进度分散在邮箱/微信/短信/招聘官网各处，JD 散落桌面，面试备战全凭记忆，**「我到底走到哪一步了、下一步该做什么」** 这种最基本的问题反而最没人答。
+求职季同时投十几二十家，进度散在邮箱、微信、招聘官网各处，JD 散在桌面，面试准备全凭记忆。
+最基础的三个问题反而没人答：**我投到哪一步了？这个岗该不该投？我上次面试到底栽在哪？**
 
-Offer Pilot 把这些事**收进一个工具**：
-
-- 🗂️ **进度一屏看清**：11 阶段流水线（简历筛选→评估→笔试→一二三面→offer），可视化漏斗图
-- 🧠 **AI 真懂你**：聊天即沉淀档案，AI 基于你的真实偏好回答问题
-- 📸 **JD 丢给它就行**：上传 JD 截图，5 秒出自我介绍+预测题+建议回答
-- 🤖 **4 大 Agent 插件**：嵌入 dsh skill，覆盖"看岗改简历/笔面备战/公司研究/进度管理"
-- ⏰ **DDL 不会忘**：每场面试设截止时间，状态自动变色，到点联动企微日历提醒
-
----
-
-## ✨ 五大模块
-
-### 📊 投递进度（核心场景）
-完整的投递漏斗 + 18 家公司清单，阶段可下拉直接改、关键行动自动建议。
-<p align="center"><img src="docs/screenshots/02-apps.png" alt="投递进度" width="800"></p>
-
-### 🤖 Agent 工作台（差异化亮点）
-从 dsh 嵌入的 4 大功能插件——点开任一卡片，进入独立的 AI 工作台，系统提示词 + 知识库上下文全自动加载。
-<p align="center"><img src="docs/screenshots/05-agent.png" alt="Agent 工作台" width="800"></p>
-
-### 🧠 个人档案 + 对话
-基本信息结构化沉淀，**聊天即沉淀档案**——随口聊的偏好自动抽取为标签，无需手动填表。
-<p align="center"><img src="docs/screenshots/01-profile.png" alt="个人档案" width="800"></p>
-
-### 📚 面邀备战
-上传 JD（文字 or 截图）→ AI 自动拆解岗位要求 + 生成自我介绍 + 预测面试题 + 知识储备清单。DDL 状态自动变色（🟢 正常 / 🟡 即将到期 / 🔴 已过期）。
-<p align="center"><img src="docs/screenshots/03-interview.png" alt="面邀备战" width="800"></p>
-
-### 🎨 作品集
-把 vibecoding 出的所有 AI 作品一键汇总，附技术栈、亮点、可展示链接——直接对接 AI 产品岗要求的 vibecoding 能力证明。
-<p align="center"><img src="docs/screenshots/04-works.png" alt="作品集" width="800"></p>
-
----
-
-## 🧰 技术栈
+Offer Pilot 把它们收进一个工具，并串成一条闭环：
 
 ```
-后端   Node.js + Express    零依赖，仅 express 一个包
-AI     DeepSeek API          Key 通过 .env 本地加载，不离开机器
-前端   原生 HTML/CSS/JS     零构建，单页应用
-数据   本地 JSON 文件        store.json + 知识库 markdown
-Agent  嵌入 dsh SKILL.md    4 大插件独立加载系统提示词 + KB
+投前：这个岗值不值得投  →  投中：我的漏斗哪里在漏  →  面后：我进步了吗
+   JD 匹配度打分            投递数据洞察              面试复盘 + 得分趋势
+                                                          ↓
+                                                    反哺下次备战
 ```
 
-### 为什么不用框架
-- **零构建**：刷新浏览器即可看效果，符合 vibecoding "所见即所得" 心智
-- **零依赖**：只有 `express`，仓库小、clone 快、新人友好
-- **隐私优先**：Key 仅在本地 `.env`，数据存 `data/store.json`，不上传任何东西
+最后那根箭头是这个工具最不一样的地方：**复盘结论会自动注入下一次备战**。
+上一场被问住的题，下次生成备战包时会强制覆盖——"答砸过的题，别再答砸一次"。
 
 ---
 
-## 🚀 5 分钟跑起来
+## 功能模块
+
+| 模块 | 干什么 | 需要 API Key 吗 |
+|---|---|---|
+| 🗂️ **投递进度** | 11 阶段流水线 + 漏斗图，阶段下拉直接改 | 否 |
+| 📊 **求职洞察** | 转化率、卡住的投递、渠道进面率、表现趋势 | 否 |
+| 🎯 **JD 匹配度** | 贴 JD → 0-100 打分 + 该不该投 + 投前补什么 | 是 |
+| 📚 **面邀备战** | JD 图/文 → 自我介绍 + 预测题 + 知识清单 | 是 |
+| 🎙️ **AI 模拟面试** | AI 扮面试官追着问，答得浅就多问一层，结束出评价 | 是 |
+| 🔍 **面试复盘** | 粘会议纪要 → 结构化复盘（评分/强弱项/改进清单） | 是 |
+| 📝 **简历生成** | 先追问信息缺口，再按目标岗位出针对性简历 | 是 |
+| ⚖️ **Offer 对比** | 总包扣掉城市生活成本看真实可支配，AI 给有立场的建议 | 是 |
+| 🤖 **Agent 工作台** | 4 大技能插件，加载你的知识库回答 | 是 |
+| 🧠 **个人档案** | 聊天即沉淀偏好，随口说的城市/倾向自动变成标签 | 是 |
+
+> 不填 Key 也能用：投递进度、求职洞察、作品集这些不调 AI 的模块照常工作。
+
+### 界面一览
+
+**JD 匹配度**——对上了什么、缺什么、投之前补什么，直接给结论：
+
+<p align="center"><img src="docs/screenshots/05-jd-match.png" alt="JD 匹配度" width="860"></p>
+
+**投递进度**与**面邀备战**：
+
+<p align="center">
+  <img src="docs/screenshots/02-apps.png" alt="投递进度" width="430">&nbsp;
+  <img src="docs/screenshots/03-interview.png" alt="面邀备战" width="430">
+</p>
+
+> 以上截图全部来自仓库自带的演示数据（`data/store.demo.json`），不含任何真实个人信息。
+
+---
+
+## 跑起来
 
 ```bash
-# 1. 克隆
 git clone https://github.com/Eurus918/offer-pilot-web.git
 cd offer-pilot-web
-
-# 2. 装依赖
 npm install
-
-# 3. 配置 Key（可选，不填也能用其他模块）
-cp .env.example .env
-# 编辑 .env，填入你的 DeepSeek Key（https://platform.deepseek.com 获取）
-
-# 4. 启动
-npm start
-# → 打开 http://localhost:3000
+cp .env.example .env      # 可选：不填 Key 也能用一半功能
+npm start                 # → http://localhost:3000
 ```
 
-> **不填 Key 也能用**：个人档案（手动偏好）、投递进度管理、作品集——这些不调用 AI 的模块都能正常使用。填了 Key 才解锁 AI 聊天、JD 图分析、Agent 工作台。
+需要 Node 18+。整个项目只有 `express` 一个依赖。
+
+### 首次打开，做三件事
+
+1. **填档案**（姓名 / 学历 / 目标岗位）——AI 的所有建议都基于它生成。不填，AI 只能给通用话术。
+2. **填 API Key**（可选）——[platform.deepseek.com](https://platform.deepseek.com) 获取，sk- 开头。
+3. **写经历库** ——打开 `agent-kb/我的经历库.md`，按模板填你自己的项目和数字。
+
+**第 3 步最值钱。** AI 严格只讲你写在这里的经历，绝不编造：你没写过的东西，它会当作"缺口"告诉你去补，而不是假装你有。
+写得越具体（尤其量化结果），简历和面试建议的质量差得越明显。
+
+想先看看效果？把 `data/store.demo.json` 复制成 `data/store.json`，有一份演示数据。
 
 ---
 
-## 🗂️ 项目结构
+## 数据存在哪
+
+| 内容 | 位置 | 会不会上传 |
+|---|---|---|
+| 投递记录、档案、复盘 | `data/store.json` | 不上传，也不进仓库（已 gitignore） |
+| API Key | `.env` 或设置页 | 不上传，不进仓库 |
+| 经历库、JD 笔记 | `agent-kb/*.md` | 不上传，不进仓库 |
+
+所有 AI 请求由你的浏览器 → 本机 Node 服务 → DeepSeek 官方接口，中间没有任何第三方。
+项目没有埋点、没有 telemetry。
+
+---
+
+## 架构
+
+```mermaid
+graph LR
+    A["浏览器<br/>原生 HTML/CSS/JS"] -->|fetch| B["Express 服务"]
+    B --> C["路由层 src/routes/<br/>按业务域拆分"]
+    C --> D["业务层 src/services/<br/>洞察计算 / Offer 测算 / 复盘聚合"]
+    C --> E["src/persona.js<br/>使用者画像"]
+    E --> F["src/prompts.js<br/>提示词模板"]
+    C --> G["src/ai.js<br/>DeepSeek 调用"]
+    G --> H["DeepSeek API"]
+    C --> I["src/store.js<br/>本地 JSON"]
+    I --> J[("data/store.json")]
+    E -.读取.-> K[("agent-kb/<br/>你的经历库")]
+```
+
+请求链路只有一跳，没有任何中间层。
 
 ```
 offer-pilot-web/
-├── server.js              # Express 后端（路由 + DeepSeek 代理 + Agent 插件引擎）
-├── package.json           # 仅一个依赖：express
-├── render.yaml            # Render 一键部署配置（可选）
-├── public/                # 前端（HTML/CSS/JS，零构建）
-│   ├── index.html
-│   ├── styles.css
-│   └── app.js
-├── data/
-│   ├── store.json         # 真实数据（gitignore，不进仓库）
-│   └── store.example.json # 脱敏示例，clone 后自动复制为 store.json
-├── agent-kb/              # 知识库（指向 offer-pilot-agent/知识库/）
-│   ├── 我的经历库.md
-│   ├── 目标岗位清单.md
-│   ├── 投递追踪表.md
-│   └── 面试备战.md
-├── docs/                  # 产品文档 + 截图
-│   ├── screenshots/       # README 用图
-│   ├── methodology.md     # 结算 Agent 设计方法论
-│   └── deploy.md          # 公网部署指南
-├── .env.example           # 环境变量模板
-├── .gitignore             # 排除 .env / store.json / node_modules
-└── README.md              # 你正在看的
+├── server.js              入口：装配与启动
+├── src/
+│   ├── config.js          路径、环境变量、城市成本表
+│   ├── store.js           本地数据读写、schema 归一化
+│   ├── ai.js              DeepSeek 调用（超时/重试/JSON 容错）
+│   ├── persona.js         使用者画像（所有 prompt 的背景来源）
+│   ├── prompts.js         提示词集中管理
+│   ├── errors.js          统一错误处理与中文提示
+│   ├── context.js         运行时上下文
+│   ├── kb.js              知识库初始化
+│   ├── routes/            HTTP 接口（按业务域拆分）
+│   └── services/          业务逻辑（洞察 / Offer / 复盘）
+├── public/                前端三件套，零构建
+├── agent-skills/          内置技能手册（Agent 工作台的能力来源）
+├── agent-kb.example/      知识库模板（首次启动自动生成为 agent-kb/）
+└── data/                  你的数据（不进仓库）
 ```
 
----
+### 几个设计取舍
 
-## 🤖 Agent 工作台原理
+**为什么不用框架**：零构建、零编译，改完刷新就能看到效果。整个仓库只有一个依赖（express），clone 快、新人看得懂。
 
-每个 Agent 插件都遵循 dsh 标准格式：
+**为什么 AI 只讲你写过的经历**：这是刻意的约束。求职助手最容易犯的错是"帮你编一段漂亮但不存在的经历"——简历过了筛，面试当场露馅。
+所以系统提示词里写死了：经历库里没有的，一律算缺口。宁可让你补，也不替你编。
 
-1. **启动时**：后端读取 `agent-kb/SKILL.md`（或嵌入的 `offer-pilot/SKILL.md`），解析 frontmatter + 4 大功能章节
-2. **用户点击插件**：前端展示卡片 + 工作台对话框
-3. **用户提问**：后端自动拼接 system 提示词 = `SKILL.md 通用约定 + 当前功能章节 + 知识库上下文`，调用 DeepSeek
-4. **流式返回**：AI 回复渲染为气泡（Markdown 风格）
+**为什么洞察模块不调 AI**：统计就是统计，用不上大模型，还省一次调用。没配 Key 的人也能立刻看到自己的漏斗。
 
-**关键设计**：知识库驱动——AI 的回答不是通用建议，而是**基于你的真实数据**给出的。
+**为什么要先追问再生成简历**：直接生成的话，AI 只能靠猜填空白。先问清量化成果和关键贡献，出来的简历才有说服力。
 
 ---
 
-## 🔗 配套作品（同作者）
+## 常见问题
 
-| 仓库 | 说明 |
-|---|---|
-| [offer-pilot-skill](https://github.com/Eurus918/offer-pilot-skill) | dsh 上的 offer-pilot 技能（Agent 工作台的能力源头） |
-| [kaoyan-skill](https://github.com/Eurus918/kaoyan-skill) | dsh 上的考研助手技能（同款技能化思路） |
-| [Eurus918/offer-pilot-web](https://github.com/Eurus918/offer-pilot-web) | 本仓库 |
+**没配 API Key 能用吗？**
+能。投递进度、求职洞察、作品集都不依赖 AI。配了 Key 才解锁 JD 分析、模拟面试、简历生成、复盘。
 
-配套文档：
-- [`docs/methodology.md`](docs/methodology.md) — 《结算 Agent 设计方法论》：B 端 AI 产品的双入口架构、数据一致性、边界划分等深度思考
+**AI 说"没有你的经历信息"怎么办？**
+去 `agent-kb/我的经历库.md` 填。那是 AI 唯一的事实来源。
+
+**想换模型？**
+设置页可以改，或者设环境变量 `DEEPSEEK_MODEL`。默认 `deepseek-chat`。
+
+**腾讯会议自动同步纪要为什么用不了？**
+那是可选功能，有硬性平台门槛：账号需商业版/企业版/教育版，应用需"查看企业录制"权限，2026-02 起新建自建应用还要 STS-Token。
+个人版账号用不了——这是平台限制。没配凭证时不影响手动粘贴纪要。见 [`docs/tencent-meeting-api.md`](docs/tencent-meeting-api.md)。
+
+**能部署到公网吗？**
+可以，`render.yaml` 已就位。但建议只在公网部署一份**不含真实数据**的实例——本工具的设计前提就是数据在你本机。
+
+**数据结构变了怎么办？**
+启动时会自动做 schema 归一化，老数据能安全加载。`store.json` 若解析失败会自动备份而不是崩溃。
 
 ---
 
-## 🌐 公网部署（可选）
+## 配置参考
 
-| 平台 | 状态 | 备注 |
+| 环境变量 | 说明 | 默认值 |
 |---|---|---|
-| Render | ✅ render.yaml 已就位 | 需要国际信用卡做 $1 验证 |
-| Railway | ⚠️ 免费额度极低 | $5/30天 + $1/月，长驻 Express 会停服 |
-| 腾讯云轻量 | ✅ 适合国内访问 | 学生认证后 ¥25.92 起/3 月 |
-| 内网穿透（ngrok/cloudflared） | ❌ 公司办公网禁止 | 会触发 IT 安全告警 |
-
-详见 [`docs/deploy.md`](docs/deploy.md)。
+| `DEEPSEEK_API_KEY` | API Key，也可在设置页填 | — |
+| `DEEPSEEK_MODEL` | 模型名 | `deepseek-chat` |
+| `PORT` | 端口 | `3000` |
+| `AI_TIMEOUT_MS` | AI 请求超时 | `120000` |
+| `OFFER_PILOT_SKILL_FILE` | 自定义 Agent 技能手册路径 | 仓库内置那份 |
+| `OFFER_PILOT_KB_DIR` | 自定义知识库目录 | `agent-kb/` |
 
 ---
 
-## 📝 License
+## License
 
 [MIT](LICENSE)
 
 ---
 
-> Built with 💜 by 王辰宇 · 2026 届 · 求职方向：AI 产品经理 / 大模型产品经理
-> 联系：wangchenyuwangyi@163.com
+> Built with 💜 by 王辰宇 · 联系：wangchenyuwangyi@163.com
+>
+> 欢迎提 issue 和 PR。如果你也在求职，祝顺利。

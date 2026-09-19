@@ -42,22 +42,21 @@ function dateOf(s) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** 各阶段计数（含顺序，便于画漏斗） */
+/**
+ * 漏斗：到达过该阶段及之后的数量（累计口径）。
+ * 漏斗应该呈递减形状——"当前停在各阶段的人数"是另一回事，放在转化率里看。
+ * 已结束/已放弃的投递无法判断曾推进到哪，保守只算到达第 0 阶段。
+ */
 function stageDistribution(apps) {
-  const counts = new Map();
-  for (const a of apps) {
-    const k = a.stageKey || "screening";
-    counts.set(k, (counts.get(k) || 0) + 1);
-  }
-  return FUNNEL_ORDER.map((key) => ({
+  const idx = (k) => FUNNEL_ORDER.indexOf(k);
+  return FUNNEL_ORDER.map((key, i) => ({
     key,
-    label: STAGE_LABEL[key] || key,
-    count: counts.get(key) || 0,
-  })).concat(
-    ["rejected", "withdrawn"]
-      .filter((k) => counts.get(k))
-      .map((k) => ({ key: k, label: STAGE_LABEL[k], count: counts.get(k), terminal: true }))
-  );
+    label: STAGE_LABEL[key],
+    count: apps.filter((a) => {
+      const cur = idx(a.stageKey || "");
+      return cur >= 0 ? cur >= i : i === 0;
+    }).length,
+  }));
 }
 
 /** 漏斗转化：到达过某阶段及之后的数量 → 相邻环节转化率 */
