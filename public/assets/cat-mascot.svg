@@ -1,0 +1,73 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fur" cx="50%" cy="40%" r="68%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e6f0ff"/>
+    </radialGradient>
+    <linearGradient id="scarf" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 毛茸茸外圈绒毛 -->
+  <g>
+    <circle cx="202" cy="116" r="15" fill="#ffffff"/>
+    <circle cx="196" cy="144" r="15" fill="#dcebff"/>
+    <circle cx="180" cy="168" r="15" fill="#ffffff"/>
+    <circle cx="156" cy="184" r="15" fill="#dcebff"/>
+    <circle cx="128" cy="190" r="15" fill="#ffffff"/>
+    <circle cx="100" cy="184" r="15" fill="#dcebff"/>
+    <circle cx="76"  cy="168" r="15" fill="#ffffff"/>
+    <circle cx="60"  cy="144" r="15" fill="#dcebff"/>
+    <circle cx="54"  cy="116" r="15" fill="#ffffff"/>
+    <circle cx="60"  cy="88"  r="15" fill="#dcebff"/>
+    <circle cx="76"  cy="64"  r="15" fill="#ffffff"/>
+    <circle cx="100" cy="48"  r="15" fill="#dcebff"/>
+    <circle cx="128" cy="42"  r="15" fill="#ffffff"/>
+    <circle cx="156" cy="48"  r="15" fill="#dcebff"/>
+    <circle cx="180" cy="64"  r="15" fill="#ffffff"/>
+    <circle cx="196" cy="88"  r="15" fill="#dcebff"/>
+  </g>
+
+  <!-- 耳朵 -->
+  <path d="M78,70 L102,28 L124,66 Z" fill="url(#fur)" stroke="#d3e3ff" stroke-width="1"/>
+  <path d="M132,66 L154,28 L178,70 Z" fill="url(#fur)" stroke="#d3e3ff" stroke-width="1"/>
+  <path d="M90,64 L102,40 L114,62 Z" fill="#fbcfe8"/>
+  <path d="M142,62 L154,40 L166,64 Z" fill="#fbcfe8"/>
+
+  <!-- 头 -->
+  <circle cx="128" cy="116" r="70" fill="url(#fur)"/>
+
+  <!-- 腮红 -->
+  <ellipse cx="82" cy="144" rx="12" ry="7.5" fill="#ffc2dd" opacity="0.65"/>
+  <ellipse cx="174" cy="144" rx="12" ry="7.5" fill="#ffc2dd" opacity="0.65"/>
+
+  <!-- 眼睛 -->
+  <circle cx="104" cy="120" r="15" fill="#2b2f3a"/>
+  <circle cx="152" cy="120" r="15" fill="#2b2f3a"/>
+  <circle cx="109" cy="114" r="5" fill="#ffffff"/>
+  <circle cx="157" cy="114" r="5" fill="#ffffff"/>
+  <circle cx="100" cy="125" r="2.5" fill="#ffffff"/>
+  <circle cx="148" cy="125" r="2.5" fill="#ffffff"/>
+
+  <!-- 鼻子 + 嘴 -->
+  <path d="M122,139 L134,139 L128,147 Z" fill="#f58cb0"/>
+  <path d="M128,147 q-7,9 -15,3 M128,147 q7,9 15,3" fill="none" stroke="#c98ca0" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- 胡须 -->
+  <g stroke="#c9d6ea" stroke-width="1.6" stroke-linecap="round">
+    <line x1="72" y1="136" x2="38" y2="128"/>
+    <line x1="72" y1="143" x2="36" y2="143"/>
+    <line x1="72" y1="150" x2="40" y2="158"/>
+    <line x1="184" y1="136" x2="218" y2="128"/>
+    <line x1="184" y1="143" x2="220" y2="143"/>
+    <line x1="184" y1="150" x2="216" y2="158"/>
+  </g>
+
+  <!-- 渐变小围巾 -->
+  <path d="M54,172 Q128,192 202,172 L204,190 Q128,210 52,190 Z" fill="url(#scarf)"/>
+  <rect x="116" y="183" width="24" height="16" rx="7" fill="#1d4ed8"/>
+  <path d="M121,197 q-4,15 3,22 q7,-7 4,-22 z" fill="#2563eb"/>
+  <path d="M135,197 q4,15 -3,22 q-7,-7 -4,-22 z" fill="#2563eb"/>
+</svg>

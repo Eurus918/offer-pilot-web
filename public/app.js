@@ -113,7 +113,7 @@ function renderChat() {
   const h = STATE.profile.chatHistory || [];
   if (h.length === 0) {
     log.innerHTML = `<div style="text-align:center;color:var(--gray);padding:40px 0;font-size:13.5px">
-      <div style="font-size:32px;margin-bottom:8px"></div>
+      <div style="margin-bottom:8px"><img src="assets/cat-mascot.svg" alt="助手" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--primary-soft)" onerror="this.style.display='none'" /></div>
       开始和 AI 聊聊吧<br><span style="font-size:12px">聊聊你的想法、偏好，或上传资料让 AI 分析</span>
     </div>`;
     return;
@@ -122,7 +122,7 @@ function renderChat() {
     const isUser = m.role === "user";
     const avatar = isUser
       ? `<div class="chat-avatar user-avatar">我</div>`
-      : `<div class="chat-avatar ai-avatar">AI</div>`;
+      : `<div class="chat-avatar ai-avatar"><img src="assets/cat-mascot.svg" alt="助手" onerror="this.outerHTML='AI'" /></div>`;
     const time = m.time ? fmtTime(m.time) : "";
     // 如果消息附带图片
     let content = esc(m.text);
@@ -176,7 +176,7 @@ $("#chatSend").addEventListener("click", async () => {
   // AI 思考中
   const aiRow = document.createElement("div");
   aiRow.className = "chat-row ai";
-  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">AI</div><div><div class="chat-bubble" style="color:var(--gray);padding:10px 14px">思考中…</div></div>`;
+  aiRow.innerHTML = `<div class="chat-avatar ai-avatar"><img src="assets/cat-mascot.svg" alt="助手" onerror="this.outerHTML='AI'" /></div><div><div class="chat-bubble" style="color:var(--gray);padding:10px 14px">思考中…</div></div>`;
   log.appendChild(aiRow);
   log.scrollTop = log.scrollHeight;
 
@@ -249,6 +249,13 @@ $("#chatInput").addEventListener("paste", (e) => {
       const f = item.getAsFile();
       if (f) { e.preventDefault(); handleChatFile(f); return; }
     }
+  }
+});
+// 回车直接发送；Shift+Enter 换行
+$("#chatInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    $("#chatSend").click();
   }
 });
 
@@ -687,7 +694,7 @@ $("#agentSend").addEventListener("click", async () => {
   // 思考中
   const aiRow = document.createElement("div");
   aiRow.className = "chat-row ai";
-  aiRow.innerHTML = `<div class="chat-avatar ai-avatar">AI</div><div><div class="chat-bubble" style="color:var(--gray)">思考中…</div></div>`;
+  aiRow.innerHTML = `<div class="chat-avatar ai-avatar"><img src="assets/cat-mascot.svg" alt="助手" onerror="this.outerHTML='AI'" /></div><div><div class="chat-bubble" style="color:var(--gray)">思考中…</div></div>`;
   log.appendChild(aiRow); log.scrollTop = log.scrollHeight;
   try {
     const j = await api("/api/agent/invoke", {
@@ -711,8 +718,9 @@ $("#agentSend").addEventListener("click", async () => {
 });
 
 // 支持 Cmd+Enter 发送
+// 回车直接发送（Shift+Enter 换行）
 $("#agentInput").addEventListener("keydown", (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("#agentSend").click(); }
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#agentSend").click(); }
 });
 
 // ---------- 面试复盘（面试后沉淀，形成"备战实战复盘迭代"闭环） ----------
