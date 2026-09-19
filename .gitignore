@@ -6,7 +6,14 @@ node_modules/
 .env.local
 
 # 真实数据（含个人投递记录、简历信息，绝不提交）
+# 模板与演示数据是要提交的，只排除使用者自己的那份
 data/store.json
+data/store.json.tmp
+data/store.json.corrupt-*
+
+# 使用者的私有知识库（从 agent-kb.example 生成，含个人信息）
+# 模板 agent-kb.example/ 会被提交
+agent-kb/
 
 # 日志
 *.log
@@ -15,6 +22,3 @@ server.log
 # 系统文件
 .DS_Store
 Thumbs.db
-
-# Agent 知识库软链（指向本机 offer-pilot-agent/知识库，路径不可移植，不提交）
-agent-kb

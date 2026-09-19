@@ -1,104 +1,32 @@
 {
+  "config": {
+    "model": "deepseek-chat",
+    "apiKey": "",
+    "meeting": {},
+    "theme": null
+  },
   "profile": {
     "basics": {
-      "name": "示例用户",
-      "phone": "138****0000",
-      "email": "your-email@example.com",
-      "city": "北京",
-      "age": 24,
-      "political": "群众",
-      "education": "XX大学 某专业硕士（示例数据，请替换为你的真实信息）",
-      "targetRoles": "产品经理 / AI 产品经理"
+      "name": "",
+      "phone": "",
+      "email": "",
+      "city": "",
+      "age": "",
+      "education": "",
+      "targetRoles": ""
     },
-    "facts": [
-      {
-        "key": "期望 base",
-        "value": "北京 / 上海",
-        "source": "手动添加",
-        "updatedAt": "2026-09-01"
-      },
-      {
-        "key": "业务偏好",
-        "value": "偏 toC 的 AI 产品",
-        "source": "手动添加",
-        "updatedAt": "2026-09-01"
-      }
-    ],
+    "facts": [],
     "chatHistory": []
   },
-  "applications": [
-    {
-      "id": "ex-1",
-      "company": "示例公司A",
-      "role": "产品培训生",
-      "channel": "",
-      "applyDate": "",
-      "stage": "简历评估中",
-      "stageKey": "review",
-      "next": "关注邮箱/短信评估通知",
-      "interviewAt": "",
-      "contact": ""
-    },
-    {
-      "id": "ex-2",
-      "company": "示例公司B",
-      "role": "AI 产品",
-      "channel": "",
-      "applyDate": "",
-      "stage": "待笔试",
-      "stageKey": "written_pending",
-      "next": "等笔试链接；超 5 工作日可礼貌催问",
-      "interviewAt": "",
-      "contact": ""
-    }
-  ],
-  "interviews": [
-    {
-      "id": "ex-iv-1",
-      "company": "示例公司B",
-      "role": "AI 产品",
-      "type": "upcoming",
-      "status": "pending",
-      "ddl": "",
-      "jdText": "（示例：收到正式 JD 后可上传图片生成备战建议）",
-      "prep": {
-        "selfIntro": "（示例）结合我的 XX 经历，我擅长……",
-        "questions": [
-          {
-            "q": "为什么想做 AI 产品？",
-            "a": "（示例回答）……"
-          }
-        ],
-        "knowledge": "（示例）建议提前了解：Agent 产品形态、RAG 原理"
-      },
-      "chat": []
-    },
-    {
-      "id": "ex-iv-2",
-      "company": "示例公司C",
-      "role": "产品经理",
-      "type": "historical",
-      "status": "failed",
-      "result": "一面挂",
-      "jdText": "",
-      "prep": {
-        "selfIntro": "",
-        "questions": [],
-        "knowledge": ""
-      },
-      "chat": []
-    }
-  ],
-  "works": [
-    {
-      "id": "ex-w-1",
-      "title": "示例作品：XX 产品设计方案",
-      "url": "",
-      "desc": "（示例）一句话描述你的作品集链接 / 项目说明",
-      "tag": "产品设计"
-    }
-  ],
-  "config": {
-    "model": "deepseek-chat"
+  "applications": [],
+  "interviews": [],
+  "works": [],
+  "reviews": [],
+  "offers": [],
+  "resume": null,
+  "offerCompare": null,
+  "onboarding": {
+    "done": false,
+    "seededFrom": "example"
   }
 }
