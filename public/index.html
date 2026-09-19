@@ -77,6 +77,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="profile">个人档案</button>
       <button class="tab" data-tab="apps">投递进度</button>
+      <button class="tab" data-tab="insights">求职洞察</button>
       <button class="tab" data-tab="interview">面邀备战</button>
       <button class="tab" data-tab="review">面试复盘</button>
       <button class="tab" data-tab="resume">简历生成</button>
@@ -134,6 +135,61 @@
       <div class="card">
         <h3>投递清单（<span id="appCount">0</span> 个）</h3>
         <div id="appTable" class="table"></div>
+      </div>
+    </section>
+
+    <!-- 求职洞察 -->
+    <section class="panel" id="insights">
+      <div class="card">
+        <div class="row-between">
+          <h3>JD 匹配度：这个岗值不值得投</h3>
+        </div>
+        <p class="hint">粘贴 JD（或上传截图），AI 对照你的真实经历打分，告诉你对上了什么、缺什么、投之前该补什么。<b>它只依据你写进「我的经历库」的内容判断，不会替你编经历。</b></p>
+        <div class="fact-add" style="margin-top:10px">
+          <input id="jdCompany" placeholder="公司（选填）" />
+          <input id="jdRole" placeholder="岗位（选填）" />
+        </div>
+        <textarea id="jdText" rows="4" placeholder="把 JD 整段粘贴到这里…" style="width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical"></textarea>
+        <div class="row-between" style="margin-top:8px">
+          <span id="jdImageTip" class="hint">也可以上传 JD 截图代替粘贴（选填）</span>
+          <button class="btn primary" id="jdMatchBtn">分析匹配度</button>
+        </div>
+        <div id="jdMatchResult" style="display:none;margin-top:14px"></div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h3>我的求职漏斗</h3>
+          <button class="btn" id="insightRefresh">刷新</button>
+        </div>
+        <p class="hint">纯数据统计，不调用 AI。看清楚瓶颈在哪个环节——是投得不够多，还是简历过不了筛。</p>
+        <div id="insightSummary" class="insight-stats"></div>
+        <div id="insightFunnel" class="insight-funnel"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>环节转化率</h3>
+          <div id="insightConv" class="table"></div>
+        </div>
+        <div class="card">
+          <h3>该跟进的投递</h3>
+          <p class="hint">超过 7 天没有进展、且还没被拒的，值得主动问一句。</p>
+          <div id="insightStale"></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>渠道效果</h3>
+          <p class="hint">记录投递渠道，才能看出哪条路真的有用。</p>
+          <div id="insightChannels" class="table"></div>
+        </div>
+        <div class="card">
+          <h3>面试表现趋势</h3>
+          <p class="hint">来自「面试复盘」的评分，看自己是不是真的在进步。</p>
+          <div id="insightTrend"></div>
+        </div>
       </div>
     </section>
 

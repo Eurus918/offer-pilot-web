@@ -49,6 +49,7 @@ async function load() {
     notice.style.display = "none";
   }
   checkOnboarding();
+  loadInsights();
 }
 
 function openSettings() {
@@ -521,7 +522,19 @@ async function openInterview(id) {
     </div>
     <h4 style="margin-top:14px">继续追问（问答窗口）</h4>
     <div class="qa-log" id="qaLog">${(iv.chat || []).map((m) => `<div class="msg ${m.role === "user" ? "user" : "ai"}">${esc(m.text)}</div>`).join("")}</div>
-    <div class="qa-input"><input id="qaInput" placeholder="针对这场面试继续问…" /><button class="btn primary" id="qaSend">问</button></div>`;
+    <div class="qa-input"><input id="qaInput" placeholder="针对这场面试继续问…" /><button class="btn primary" id="qaSend">问</button></div>
+    <div class="row-between" style="margin-top:18px">
+      <h4>AI 模拟面试</h4>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="mockStart">开始 / 重来</button>
+        <button class="btn" id="mockEnd">结束并评价</button>
+      </div>
+    </div>
+    <p class="hint">让 AI 扮演面试官连续追问——答得浅、没数据，它就会追着问一层。结束后给整场评分和改进清单。</p>
+    <div class="qa-log" id="mockLog">${(iv.mock || []).map((m) => `<div class="msg ${m.role === "user" ? "user" : "ai"}">${esc(m.text)}</div>`).join("")}</div>
+    <div class="qa-input"><input id="mockInput" placeholder="你的回答…（先点「开始」，AI 会先提问）" /><button class="btn primary" id="mockSend">回答</button></div>
+    <div id="mockResult">${iv.mockResult ? renderMockResultHtml(iv.mockResult) : ""}</div>`;
+  bindMock(id, iv);
   const log = $("#qaLog");
   $("#qaSend").addEventListener("click", async () => {
     const v = $("#qaInput").value.trim(); if (!v) return;
@@ -1361,3 +1374,246 @@ $("#obSkip").addEventListener("click", async () => {
   } catch { /* 跳过失败也不该卡住用户 */ }
   closeOnboarding();
 });
+
+// ---------- 求职洞察 ----------
+async function loadInsights() {
+  try {
+    const j = await api("/api/insights");
+    renderInsights(j.insights, j.reviewSummary);
+  } catch (e) {
+    $("#insightSummary").innerHTML = `<span class="hint">⚠ ${esc(e.message)}</span>`;
+  }
+}
+
+function renderInsights(d, rs) {
+  if (!d) return;
+  const s = d.summary || {};
+  const stat = (label, val) =>
+    `<div class="ins-stat"><div class="ins-stat-v">${val}</div><div class="ins-stat-l">${label}</div></div>`;
+
+  $("#insightSummary").innerHTML = [
+    stat("总投递", s.total ?? 0),
+    stat("进行中", s.active ?? 0),
+    stat("已 offer", s.offers ?? 0),
+    stat("offer 率", (s.offerRate ?? 0) + "%"),
+    stat("待面试", s.upcomingInterviews ?? 0),
+    stat("已复盘", (rs && rs.analyzedCount) || 0),
+  ].join("");
+
+  // 漏斗条形图
+  const funnel = (d.funnel || []).filter((f) => !f.terminal);
+  const max = Math.max(1, ...funnel.map((f) => f.count));
+  $("#insightFunnel").innerHTML = funnel.length
+    ? funnel.map((f) => `
+      <div class="ins-funnel-row">
+        <div class="ins-funnel-label">${esc(f.label)}</div>
+        <div class="ins-funnel-track">
+          <div class="ins-funnel-bar" style="width:${((f.count / max) * 100).toFixed(1)}%"></div>
+        </div>
+        <div class="ins-funnel-num">${f.count}</div>
+      </div>`).join("")
+    : `<span class="hint">还没有投递记录。先去「投递进度」加几家。</span>`;
+
+  // 转化率
+  const steps = (d.conversion && d.conversion.steps) || [];
+  $("#insightConv").innerHTML = steps.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+        ${steps.map((st) => `
+          <tr>
+            <td style="padding:6px 4px;border-bottom:1px solid var(--line)">${esc(st.from)} → ${esc(st.to)}</td>
+            <td style="padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;font-weight:600;color:${st.rate === null ? "var(--muted)" : st.rate >= 50 ? "var(--green)" : "var(--ink)"}">${st.rate === null ? "—" : st.rate + "%"}</td>
+          </tr>`).join("")}
+      </table>`
+    : `<span class="hint">数据还不够，多投几家就能看出瓶颈。</span>`;
+
+  // 该跟进
+  const stale = d.stale || [];
+  $("#insightStale").innerHTML = stale.length
+    ? stale.map((x) => `
+        <div class="ins-stale-item">
+          <div style="min-width:0">
+            <div style="font-weight:600;font-size:13.5px">${esc(x.company)}${x.role ? " · " + esc(x.role) : ""}</div>
+            <div class="hint">${esc(x.stage)}</div>
+          </div>
+          <div class="ins-stale-days">${x.staleDays} 天</div>
+        </div>`).join("")
+    : `<span class="hint">暂时没有卡住的投递。记得在投递时填「投递日」，这里才准。</span>`;
+
+  // 渠道
+  const channels = d.channels || [];
+  $("#insightChannels").innerHTML = channels.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+        ${channels.map((c) => `
+          <tr>
+            <td style="padding:6px 4px;border-bottom:1px solid var(--line)">${esc(c.channel)}</td>
+            <td style="padding:6px 4px;border-bottom:1px solid var(--line);text-align:right">${c.total} 家</td>
+            <td style="padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;color:${c.advancedRate >= 40 ? "var(--green)" : "var(--muted)"}">进面 ${c.advancedRate}%</td>
+          </tr>`).join("")}
+      </table>`
+    : `<span class="hint">在投递清单里填上渠道，这里会告诉你哪条路最有效。</span>`;
+
+  // 面试表现趋势
+  const trend = (rs && rs.scoreTrend) || [];
+  if (!trend.length) {
+    $("#insightTrend").innerHTML = `<span class="hint">还没有复盘记录。面完一场去「面试复盘」粘纪要，这里就会画出你的进步曲线。</span>`;
+  } else {
+    const bars = trend.map((t) => {
+      const h = Math.max(4, Math.round((t.score / 10) * 100));
+      const color = t.score >= 7 ? "var(--green)" : t.score >= 5 ? "var(--yellow)" : "var(--red)";
+      return `<div class="ins-trend-col" title="${esc((t.company || "") + " " + (t.date || ""))}：${t.score} 分">
+        <div class="ins-trend-bar" style="height:${h}%;background:${color}"></div>
+        <div class="ins-trend-label">${t.score}</div>
+      </div>`;
+    }).join("");
+    $("#insightTrend").innerHTML =
+      `<div class="ins-trend">${bars}</div>` +
+      `<div class="hint" style="margin-top:8px">平均分 ${rs.avgScore ?? "—"} / 10 · 最新 ${rs.latestScore ?? "—"} 分 · 共 ${trend.length} 场</div>`;
+  }
+}
+
+// ---------- JD 匹配度 ----------
+$("#jdMatchBtn").addEventListener("click", async () => {
+  const jdText = $("#jdText").value.trim();
+  if (!jdText) { toast("请先粘贴 JD 内容"); return; }
+  const btn = $("#jdMatchBtn");
+  btn.textContent = "分析中…"; btn.disabled = true;
+  try {
+    const j = await api("/api/jd/match", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company: $("#jdCompany").value.trim(),
+        role: $("#jdRole").value.trim(),
+        jdText,
+      }),
+    });
+    renderJdMatch(j.match);
+  } catch (e) {
+    toast("⚠ " + e.message);
+  }
+  btn.textContent = "分析匹配度"; btn.disabled = false;
+});
+
+function renderJdMatch(m) {
+  if (!m) return;
+  const box = $("#jdMatchResult");
+  box.style.display = "block";
+  const score = Number(m.score) || 0;
+  const color = score >= 75 ? "var(--green)" : score >= 55 ? "var(--yellow)" : "var(--red)";
+  const list = (t, arr) =>
+    arr && arr.length
+      ? `<div class="rv-section"><h4>${t}</h4><ul class="ins-list">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`
+      : "";
+  const block = (t, txt) =>
+    txt ? `<div class="rv-section"><h4>${t}</h4><div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${esc(txt)}</div></div>` : "";
+
+  box.innerHTML = `
+    <div class="jd-score-row">
+      <div class="jd-score" style="color:${color}">${score}<small>/100</small></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:650">${esc(m.verdict || "")}</div>
+        <div class="hint" style="margin-top:2px">${esc(m.oneLine || "")}</div>
+      </div>
+    </div>
+    ${list("✅ 对上了什么", m.matches)}
+    ${list("⚠️ 还缺什么", m.gaps)}
+    ${m.keywords && m.keywords.length
+      ? `<div class="rv-section"><h4>🔑 简历该补的关键词</h4><div class="ins-kw">${m.keywords.map((k) => `<span class="ins-kw-item">${esc(k)}</span>`).join("")}</div></div>`
+      : ""}
+    ${block("🎯 投之前该做什么", m.advice)}
+    ${block("🕳 这个岗位可能的坑", m.risk)}`;
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+$("#insightRefresh").addEventListener("click", async () => {
+  await loadInsights();
+  toast("已刷新");
+});
+
+// ---------- AI 模拟面试 ----------
+function renderMockResultHtml(r) {
+  if (!r) return "";
+  const score = Number(r.score) || 0;
+  const color = score >= 7 ? "var(--green)" : score >= 5 ? "var(--yellow)" : "var(--red)";
+  const list = (t, arr) =>
+    arr && arr.length
+      ? `<div class="rv-section"><h4>${t}</h4><ul class="ins-list">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`
+      : "";
+  return `<div style="margin-top:12px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="font-size:28px;font-weight:700;color:${color}">${score}<small style="font-size:12px;color:var(--muted);font-weight:500">/10</small></div>
+      <div style="font-size:13.5px;line-height:1.6">${esc(r.summary || "")}</div>
+    </div>
+    ${list("✅ 答得好的", r.good)}
+    ${list("⚠️ 答得不好的", r.bad)}
+    ${list("💡 本该提到却没说", r.missed)}
+    ${list("🎯 下次重点练", r.nextPrep)}
+  </div>`;
+}
+
+function bindMock(id, iv) {
+  const log = $("#mockLog");
+  const add = (role, text) => {
+    log.innerHTML += `<div class="msg ${role}">${esc(text)}</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+  const thinking = () => {
+    const ai = document.createElement("div");
+    ai.className = "msg ai";
+    ai.textContent = "思考中…";
+    log.appendChild(ai);
+    log.scrollTop = log.scrollHeight;
+    return ai;
+  };
+
+  $("#mockStart").addEventListener("click", async () => {
+    log.innerHTML = "";
+    $("#mockResult").innerHTML = "";
+    const ai = thinking(); ai.textContent = "面试官正在开场…";
+    try {
+      const j = await api("/api/interviews/" + id + "/mock", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "start" }),
+      });
+      ai.textContent = j.reply;
+      iv.mock = j.mock || [];
+      iv.mockResult = null;
+    } catch (e) { ai.textContent = "" + e.message; }
+  });
+
+  $("#mockSend").addEventListener("click", async () => {
+    const v = $("#mockInput").value.trim();
+    if (!v) return;
+    $("#mockInput").value = "";
+    add("user", v);
+    const ai = thinking(); ai.textContent = "追问中…";
+    try {
+      const j = await api("/api/interviews/" + id + "/mock", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "continue", message: v }),
+      });
+      ai.textContent = j.reply;
+      iv.mock = j.mock || [];
+    } catch (e) { ai.textContent = "" + e.message; }
+    log.scrollTop = log.scrollHeight;
+  });
+
+  $("#mockInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#mockSend").click(); }
+  });
+
+  $("#mockEnd").addEventListener("click", async () => {
+    if (!(iv.mock || []).length) { toast("先开始一场模拟面试"); return; }
+    const btn = $("#mockEnd");
+    btn.textContent = "评价中…"; btn.disabled = true;
+    try {
+      const j = await api("/api/interviews/" + id + "/mock", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "end" }),
+      });
+      iv.mockResult = j.mockResult;
+      $("#mockResult").innerHTML = renderMockResultHtml(j.mockResult);
+      toast("已出评价");
+    } catch (e) { toast("⚠ " + e.message); }
+    btn.textContent = "结束并评价"; btn.disabled = false;
+  });
+}

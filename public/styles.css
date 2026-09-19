@@ -536,3 +536,60 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 1
   .ob-fields { grid-template-columns: 1fr; }
   .ob-head, .ob-body, .ob-foot { padding-left: 18px; padding-right: 18px; }
 }
+
+/* ---------- 求职洞察 ---------- */
+.insight-stats {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 14px 0 4px;
+}
+@media (max-width: 720px) { .insight-stats { grid-template-columns: repeat(3, 1fr); } }
+.ins-stat {
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px 12px; text-align: center;
+}
+.ins-stat-v { font-size: 20px; font-weight: 680; color: var(--primary); line-height: 1.25; }
+.ins-stat-l { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+.insight-funnel { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.ins-funnel-row { display: flex; align-items: center; gap: 10px; }
+.ins-funnel-label { width: 84px; flex: 0 0 84px; font-size: 12.5px; color: var(--muted); text-align: right; }
+.ins-funnel-track {
+  flex: 1; height: 18px; background: var(--bg); border-radius: 4px; overflow: hidden;
+}
+.ins-funnel-bar {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--primary-2), var(--primary));
+  transition: width .3s ease;
+}
+.ins-funnel-num { width: 28px; flex: 0 0 28px; font-size: 13px; font-weight: 620; }
+
+.ins-stale-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--line);
+}
+.ins-stale-item:last-child { border-bottom: none; }
+.ins-stale-days {
+  font-size: 13px; font-weight: 620; color: var(--yellow);
+  background: var(--bg); padding: 2px 8px; border-radius: 10px; white-space: nowrap;
+}
+
+.ins-trend { display: flex; align-items: flex-end; gap: 8px; height: 96px; padding-top: 6px; }
+.ins-trend-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; min-width: 0; }
+.ins-trend-bar { border-radius: 3px 3px 0 0; min-height: 3px; transition: height .3s ease; }
+.ins-trend-label { font-size: 11px; color: var(--muted); text-align: center; margin-top: 3px; }
+
+.ins-list { margin: 6px 0 0 18px; font-size: 13px; line-height: 1.75; }
+.ins-list li { margin-bottom: 2px; }
+
+.ins-kw { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ins-kw-item {
+  background: var(--primary-soft); color: var(--primary); font-size: 12px;
+  padding: 3px 9px; border-radius: 10px;
+}
+
+.jd-score-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 16px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.jd-score { font-size: 34px; font-weight: 700; line-height: 1; }
+.jd-score small { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 2px; }

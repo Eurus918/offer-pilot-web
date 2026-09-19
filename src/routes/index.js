@@ -12,6 +12,7 @@ import { registerOffers } from "./offers.js";
 import { registerAgent } from "./agent.js";
 import { registerMeeting } from "./meeting.js";
 import { registerTheme } from "./theme.js";
+import { registerInsights } from "./insights.js";
 
 export function createRouter(ctx) {
   const router = Router();
@@ -25,5 +26,6 @@ export function createRouter(ctx) {
   registerAgent(router, ctx);
   registerMeeting(router, ctx);
   registerTheme(router, ctx);
+  registerInsights(router, ctx);
   return router;
 }
