@@ -33,31 +33,71 @@ async function load() {
   renderInterviews();
   renderWorks();
   const kb = $("#keyBadge");
-  if (STATE.hasKey) { kb.textContent = "API Key：已设置"; kb.classList.add("ok"); }
+  kb.textContent = STATE.hasKey ? "API Key：已设置" : "API Key：未设置";
+  kb.classList.toggle("ok", !!STATE.hasKey);
   const notice = $("#aiNotice");
   if (!STATE.hasKey) {
     notice.style.display = "block";
-    notice.innerHTML = "<b>AI 功能未启用</b>：未检测到 DeepSeek API Key（或账户无余额）。已为你预置 <b>携程 / 新浪</b> 的面试备战包，可直接在「面邀备战」查看；配置 Key 后解锁 JD 图生成与 AI 问答。去「设置」填入 sk- 开头的 Key 即可。";
+    notice.innerHTML =
+      "<b>AI 功能未启用</b>：还没检测到 DeepSeek API Key。" +
+      "不填也能用——投递进度、面试复盘、Offer 对比都不依赖 AI。" +
+      "配置 Key 后解锁 AI 对话、JD 分析与简历生成。" +
+      "<a href='#' id='noticeSetup' style='margin-left:6px'>去设置 →</a>";
+    const link = $("#noticeSetup");
+    if (link) link.addEventListener("click", (e) => { e.preventDefault(); openSettings(); });
+  } else {
+    notice.style.display = "none";
   }
+  checkOnboarding();
+}
+
+function openSettings() {
+  $$(".tab").forEach((x) => x.classList.remove("active"));
+  $$(".panel").forEach((x) => x.classList.remove("active"));
+  const t = $('.tab[data-tab="settings"]');
+  if (t) t.classList.add("active");
+  $("#settings").classList.add("active");
+}
+
+// ---------- 首次启动引导 ----------
+function checkOnboarding() {
+  const o = STATE.onboarding;
+  if (!o || o.done) return;
+  // 档案已经填过（老用户升级上来）就只补一次标记，不打扰
+  if (o.ready) {
+    api("/api/onboarding", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => {});
+    return;
+  }
+  const b = STATE.profile?.basics || {};
+  $("#obName").value = b.name || "";
+  $("#obEdu").value = b.education || "";
+  $("#obTarget").value = b.targetRoles || "";
+  $("#obCity").value = b.city || "";
+  $("#onboardMask").style.display = "flex";
+}
+function closeOnboarding() {
+  $("#onboardMask").style.display = "none";
 }
 
 // ---------- profile ----------
 function renderProfile() {
-  const b = STATE.profile.basics;
+  const b = STATE.profile?.basics || {};
+  const v = (x) => esc(x || "—");
+  const cityAge = [b.city, b.age ? b.age + "岁" : "", b.political].filter(Boolean).join(" · ");
   $("#basics").innerHTML = `
     <div class="kv-row">
-      <div class="kv-label">姓名</div><div class="kv-val">${b.name}</div>
-      <div class="kv-label">电话</div><div class="kv-val">${b.phone}</div>
+      <div class="kv-label">姓名</div><div class="kv-val">${v(b.name)}</div>
+      <div class="kv-label">电话</div><div class="kv-val">${v(b.phone)}</div>
     </div>
     <div class="kv-row">
-      <div class="kv-label">邮箱</div><div class="kv-val">${b.email}</div>
-      <div class="kv-label">城市 / 年龄</div><div class="kv-val">${b.city} · ${b.age}岁 · ${b.political}</div>
+      <div class="kv-label">邮箱</div><div class="kv-val">${v(b.email)}</div>
+      <div class="kv-label">城市 / 年龄</div><div class="kv-val">${v(cityAge)}</div>
     </div>
     <div class="kv-row full-width">
-      <div class="kv-label">学历</div><div class="kv-val">${b.education}</div>
+      <div class="kv-label">学历</div><div class="kv-val">${v(b.education)}</div>
     </div>
     <div class="kv-row full-width">
-      <div class="kv-label">目标岗位</div><div class="kv-val">${b.targetRoles}</div>
+      <div class="kv-label">目标岗位</div><div class="kv-val">${v(b.targetRoles)}</div>
     </div>`;
   renderFacts();
   renderChat();
@@ -1283,3 +1323,41 @@ function renderOfferCompare(c) {
   box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 loadOffers();
+// ---------- 引导层交互 ----------
+$("#obStart").addEventListener("click", async () => {
+  const key = $("#obKey").value.trim();
+  const hasAny = ["obName", "obEdu", "obTarget", "obCity"].some((id) => $("#" + id).value.trim());
+  try {
+    if (hasAny) {
+      await api("/api/onboarding", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: $("#obName").value.trim(),
+          education: $("#obEdu").value.trim(),
+          targetRoles: $("#obTarget").value.trim(),
+          city: $("#obCity").value.trim(),
+        }),
+      });
+    } else {
+      await api("/api/onboarding/skip", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    }
+    if (key) {
+      await api("/api/config", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key }),
+      });
+    }
+    closeOnboarding();
+    await load();
+    toast(key ? "已保存，AI 功能已启用" : "已保存");
+  } catch (e) {
+    toast("⚠ " + e.message);
+  }
+});
+
+$("#obSkip").addEventListener("click", async () => {
+  try {
+    await api("/api/onboarding/skip", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  } catch { /* 跳过失败也不该卡住用户 */ }
+  closeOnboarding();
+});

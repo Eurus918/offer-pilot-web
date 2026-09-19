@@ -7,6 +7,65 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- 首次启动引导 -->
+  <div id="onboardMask" class="ob-mask" style="display:none">
+    <div class="ob-modal">
+      <div class="ob-head">
+        <div class="ob-logo">OP</div>
+        <div>
+          <h2>欢迎使用 Offer Pilot</h2>
+          <p class="ob-sub">做三件事，让 AI 真正按你的情况给建议。都能跳过，之后在「设置」里随时补。</p>
+        </div>
+      </div>
+
+      <div class="ob-body">
+        <div class="ob-step">
+          <div class="ob-step-n">1</div>
+          <div class="ob-step-main">
+            <h4>告诉它你是谁</h4>
+            <p class="hint">AI 的所有建议都基于这里的档案生成。不填，它就只能给谁都能用的通用话术。</p>
+            <div class="ob-fields">
+              <input id="obName" placeholder="姓名" />
+              <input id="obEdu" placeholder="学历，如：XX大学 计算机硕士" />
+              <input id="obTarget" placeholder="目标岗位，如：AI 产品经理" />
+              <input id="obCity" placeholder="意向城市，如：北京" />
+            </div>
+          </div>
+        </div>
+
+        <div class="ob-step">
+          <div class="ob-step-n">2</div>
+          <div class="ob-step-main">
+            <h4>填 DeepSeek API Key（可选）</h4>
+            <p class="hint">
+              不填也能用——投递进度、面试复盘、Offer 对比这些不调 AI 的模块照常工作。
+              填了才解锁 AI 对话、JD 分析、简历生成。
+              <a href="https://platform.deepseek.com" target="_blank" rel="noopener">去获取 →</a>
+            </p>
+            <input id="obKey" type="password" placeholder="sk- 开头，留空则稍后再填" />
+          </div>
+        </div>
+
+        <div class="ob-step">
+          <div class="ob-step-n">3</div>
+          <div class="ob-step-main">
+            <h4>写下你的经历（强烈建议）</h4>
+            <p class="hint">
+              AI 只讲你写过的经历，<b>绝不编造</b>。打开项目里的
+              <code>agent-kb/我的经历库.md</code>，按模板填上你自己的项目和数字。
+              写得越具体（尤其是量化结果），简历和面试建议越有用。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-foot">
+        <button class="btn" id="obSkip">以后再说</button>
+        <button class="btn primary" id="obStart">开始使用</button>
+      </div>
+    </div>
+  </div>
+
   <header class="topbar">
     <div class="brand">
       <span class="logo">OP</span>

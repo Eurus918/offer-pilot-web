@@ -45,18 +45,6 @@ export function registerProfile(router, ctx) {
       if (!message && !(file && file.data)) throw badRequest("消息和文件不能都为空");
 
       const { text, images } = buildUserContent(message, file);
-      const push = (role, t, fileName) => {
-        ctx.store.profile.chatHistory.push({
-          role,
-          text: t,
-          at: Date.now(),
-          ...(fileName ? { fileName } : {}),
-        });
-      };
-
-      if (file && file.data) push("user", message || `[上传了文件: ${file.name || "附件"}]`, file.name);
-      else push("user", message);
-      ctx.save();
 
       const reply = await ctx.ai({
         system: chatSys(ctx.store),
@@ -65,7 +53,14 @@ export function registerProfile(router, ctx) {
         history: (Array.isArray(history) ? history : []).map((h) => ({ role: h.role, content: h.text })),
       });
 
-      push("assistant", reply);
+      // 拿到回复后才落盘：调用失败时不留一条"没有回答的提问"在记录里
+      const now = Date.now();
+      ctx.store.profile.chatHistory.push(
+        file && file.data
+          ? { role: "user", text: message || `[上传了文件: ${file.name || "附件"}]`, at: now, fileName: file.name }
+          : { role: "user", text: message, at: now },
+        { role: "assistant", text: reply, at: Date.now() }
+      );
       ctx.save();
       res.json({ reply });
     })
